@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+
 use Illuminate\Support\Str;
 
 class Ticket extends Model
@@ -72,9 +72,9 @@ class Ticket extends Model
         return $this->hasMany(Comment::class)->where('is_internal', true);
     }
 
-    public function activityLogs(): MorphMany
+    public function activityLogs(): HasMany
     {
-        return $this->morphMany(ActivityLog::class, 'subject');
+        return $this->hasMany(ActivityLog::class);
     }
 
     public function isOverdue(): bool

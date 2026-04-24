@@ -72,7 +72,7 @@ class TicketController extends Controller
             'low' => 48,
         ];
 
-        $priority = $request->string('priority');
+        $priority = $request->input('priority');
         if (isset($prioritySla[$priority])) {
             $slaDeadline = now()->addHours($prioritySla[$priority]);
         }
@@ -82,7 +82,7 @@ class TicketController extends Controller
             'category_id' => $request->integer('category_id'),
             'title' => $request->string('title'),
             'description' => $request->string('description'),
-            'priority' => $request->string('priority'),
+            'priority' => $priority,
             'status' => 'open',
             'sla_deadline' => $slaDeadline,
         ]);
