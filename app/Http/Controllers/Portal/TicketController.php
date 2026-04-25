@@ -30,7 +30,7 @@ class TicketController extends Controller
             ->when($request->string('priority')->isNotEmpty(), fn ($query) => $query->where('priority', $request->string('priority')))
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->string('search')}%")
-                  ->orWhere('description', 'like', "%{$request->string('search')}%");
+                    ->orWhere('description', 'like', "%{$request->string('search')}%");
             }));
 
         $tickets = $ticketQuery
@@ -41,7 +41,7 @@ class TicketController extends Controller
         return Inertia::render('Portal/Tickets/Index', [
             'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'search']),
-            'statuses' => ['open', 'in_progress', 'resolved', 'closed'],
+            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
     }
@@ -112,8 +112,7 @@ class TicketController extends Controller
         $ticket->load(['category', 'reporter', 'assignee', 'comments.user']);
 
         $comments = $ticket->comments
-            ->filter(fn ($c) => ! $c->is_internal || $ticket->user_id === auth()->id() || auth()->user()->isStaffOrAdmin())
-            ->when(! auth()->user()->isStaffOrAdmin(), fn ($c) => $c->filter(fn ($c) => ! $c->is_internal))
+            ->filter(fn ($c) => ! $c->is_internal || auth()->user()->isStaffOrAdmin())
             ->map(fn ($comment) => [
                 'id' => $comment->id,
                 'message' => $comment->message,
@@ -137,6 +136,18 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
+        if ($ticket->user_id !== $request->user()->id) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Hanya pelapor yang dapat memberi rating.']);
+        }
+
+        if ($ticket->status !== 'resolved') {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Tiket harus berstatus selesai untuk memberi rating.']);
+        }
+
+        if ($ticket->rating !== null) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Rating sudah diberikan.']);
+        }
+
         $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'rating_comment' => ['nullable', 'string'],
@@ -148,6 +159,41 @@ class TicketController extends Controller
         ]);
 
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Rating berhasil dikirim.');
+    }
+
+    public function cancel(Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('cancel', $ticket);
+
+        $ticket->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+
+        $ticket->activityLogs()->create([
+            'user_id' => auth()->id(),
+            'action' => 'cancelled',
+            'description' => 'Tiket dibatalkan oleh pelapor.',
+        ]);
+
+        $this->notifyRelatedUsers($ticket, 'cancelled');
+
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket berhasil dibatalkan.');
+    }
+
+    public function destroy(Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('delete', $ticket);
+
+        foreach ($ticket->comments as $comment) {
+            foreach ($comment->attachments ?? [] as $path) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
+        $ticket->delete();
+
+        return redirect()->route('portal.tickets.index')->with('success', 'Tiket berhasil dihapus.');
     }
 
     public function comment(StoreCommentRequest $request, Ticket $ticket): RedirectResponse
@@ -165,7 +211,7 @@ class TicketController extends Controller
         $comment = $ticket->comments()->create([
             'user_id' => $request->user()->id,
             'message' => $request->string('message')->toString(),
-            'is_internal' => false,
+            'is_internal' => $request->boolean('is_internal', false),
             'attachments' => $attachmentPaths,
         ]);
 
@@ -184,7 +230,7 @@ class TicketController extends Controller
             ->values();
 
         if ($users->isNotEmpty()) {
-            Notification::send($users, new \App\Notifications\TicketActivityNotification($ticket, $comment, $action));
+            Notification::send($users, new TicketActivityNotification($ticket, $comment, $action));
         }
     }
 }

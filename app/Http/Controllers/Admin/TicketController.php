@@ -9,6 +9,7 @@ use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Ticket;
+use App\Models\TicketTemplate;
 use App\Models\User;
 use App\Notifications\TicketActivityNotification;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +31,7 @@ class TicketController extends Controller
             ->when($request->string('assigned_to')->isNotEmpty(), fn ($query) => $query->where('assigned_to', $request->string('assigned_to')))
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->string('search')}%")
-                  ->orWhere('description', 'like', "%{$request->string('search')}%");
+                    ->orWhere('description', 'like', "%{$request->string('search')}%");
             }));
 
         $tickets = $ticketQuery
@@ -41,7 +42,7 @@ class TicketController extends Controller
         return Inertia::render('Admin/Tickets/Index', [
             'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search']),
-            'statuses' => ['open', 'in_progress', 'resolved', 'closed'],
+            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
             'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
@@ -83,14 +84,16 @@ class TicketController extends Controller
             'activityLogs' => $activityLogs,
             'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
             'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
-            'statuses' => ['open', 'in_progress', 'resolved', 'closed'],
+            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
-            'templates' => \App\Models\TicketTemplate::query()->select('id', 'title', 'content')->orderBy('title')->get(),
+            'templates' => TicketTemplate::query()->select('id', 'title', 'content')->orderBy('title')->get(),
         ]);
     }
 
     public function update(UpdateTicketRequest $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorize('update', $ticket);
+
         $oldStatus = $ticket->status;
         $oldAssignee = $ticket->assigned_to;
 
@@ -98,6 +101,21 @@ class TicketController extends Controller
 
         if ($payload['status'] === 'resolved' && $oldStatus !== 'resolved') {
             $payload['resolved_at'] = now();
+            $payload['cancelled_at'] = null;
+        }
+
+        if ($payload['status'] === 'cancelled' && $oldStatus !== 'cancelled') {
+            $payload['cancelled_at'] = now();
+            $payload['resolved_at'] = null;
+        }
+
+        if ($payload['status'] === 'open' || $payload['status'] === 'in_progress') {
+            if ($oldStatus === 'resolved') {
+                $payload['resolved_at'] = null;
+            }
+            if ($oldStatus === 'cancelled') {
+                $payload['cancelled_at'] = null;
+            }
         }
 
         $ticket->update($payload);
@@ -139,6 +157,8 @@ class TicketController extends Controller
 
     public function comment(StoreCommentRequest $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorize('comment', $ticket);
+
         $attachmentPaths = [];
 
         if ($request->hasFile('attachments')) {

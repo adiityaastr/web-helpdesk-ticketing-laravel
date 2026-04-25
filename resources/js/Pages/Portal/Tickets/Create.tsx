@@ -147,15 +147,15 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
     return (
         <PortalLayout>
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-800">Buat Tiket Baru</h1>
+                <h1 className="text-lg font-semibold text-slate-900">Buat Tiket Baru</h1>
                 <p className="text-sm text-slate-500">Laporkan masalah atau permintaan kepada tim IT</p>
             </div>
 
-            <form onSubmit={submit} className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form onSubmit={submit} className="space-y-5 rounded-lg border border-slate-200 bg-white p-6">
                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Kategori</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Kategori</label>
                     <select
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                         value={data.category_id}
                         onChange={(e) => setData('category_id', e.target.value)}
                     >
@@ -166,9 +166,9 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                 </div>
 
                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Judul</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Judul</label>
                     <input
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                         value={data.title}
                         onChange={(e) => setData('title', e.target.value)}
                         placeholder="Deskripsi singkat masalah Anda"
@@ -177,9 +177,9 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                 </div>
 
                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Deskripsi Lengkap</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Deskripsi Lengkap</label>
                     <textarea
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                         rows={6}
                         value={data.description}
                         onChange={(e) => setData('description', e.target.value)}
@@ -189,9 +189,9 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                 </div>
 
                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Prioritas</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Prioritas</label>
                     <select
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                         value={data.priority}
                         onChange={(e) => setData('priority', e.target.value)}
                     >
@@ -209,14 +209,14 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                             type="button"
                             onClick={openCamera}
                             disabled={data.attachments.length >= MAX_ATTACHMENTS}
-                            className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                         >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>photo_camera</span>
                             Ambil Foto
                         </button>
 
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>attach_file</span>
                             Pilih File
                             <input
                                 type="file"
@@ -233,22 +233,22 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                     {data.attachments.length > 0 && (
                         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
                             {data.attachments.map((file, i) => (
-                                <div key={i} className="group relative overflow-hidden rounded-lg border border-slate-200">
+                                <div key={i} className="group relative overflow-hidden rounded-md border border-slate-200">
                                     {previews[i] ? (
                                         <img src={previews[i]} alt={file.name} className="h-24 w-full object-cover" />
                                     ) : (
                                         <div className="flex h-24 w-full items-center justify-center bg-slate-50">
-                                            <svg className="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '32px' }}>description</span>
                                         </div>
                                     )}
                                     <button
                                         type="button"
                                         onClick={() => removeAttachment(i)}
-                                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white opacity-0 transition group-hover:opacity-100"
                                     >
-                                        ✕
+                                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
                                     </button>
-                                    <p className="truncate px-1 py-0.5 text-[10px] text-slate-500">{file.name}</p>
+                                    <p className="truncate px-1 py-0.5 text-[10px] text-slate-400">{file.name}</p>
                                 </div>
                             ))}
                         </div>
@@ -256,10 +256,10 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                    <button type="submit" className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50" disabled={processing}>
+                    <button type="submit" className="rounded-md bg-teal-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={processing}>
                         Kirim Tiket
                     </button>
-                    <Link href="/portal/tickets" className="rounded-lg border border-slate-300 px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <Link href="/portal/tickets" className="rounded-md border border-slate-300 px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
                         Batal
                     </Link>
                 </div>
@@ -273,14 +273,14 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                             <button
                                 type="button"
                                 onClick={switchCamera}
-                                className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30"
+                                className="rounded-md bg-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/30"
                             >
-                                {facingMode === 'environment' ? '📷 Depan' : '📷 Belakang'}
+                                {facingMode === 'environment' ? 'Depan' : 'Belakang'}
                             </button>
                             <button
                                 type="button"
                                 onClick={closeCamera}
-                                className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700"
+                                className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700"
                             >
                                 Tutup
                             </button>
@@ -304,7 +304,7 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                             onClick={switchCamera}
                             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
                         >
-                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0V9a8 8 0 0115.356 2m-2.2-2.2A5.001 5.001 0 006.582 9m10.176 4.2A5.001 5.001 0 006.582 9" /></svg>
+                            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>cameraswitch</span>
                         </button>
                         <button
                             type="button"
@@ -318,16 +318,16 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
                             onClick={closeCamera}
                             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
                         >
-                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
                         </button>
                     </div>
                 </div>
             )}
 
             {toast && (
-                <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 animate-[fadeUp_0.3s_ease-out] rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white shadow-lg">
+                <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 animate-[fadeUp_0.3s_ease-out] rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white">
                     <div className="flex items-center gap-2">
-                        <svg className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span className="material-symbols-outlined text-emerald-400" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                         {toast}
                     </div>
                 </div>

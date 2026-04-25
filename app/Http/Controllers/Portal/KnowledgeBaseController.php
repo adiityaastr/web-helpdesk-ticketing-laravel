@@ -24,6 +24,10 @@ class KnowledgeBaseController extends Controller
 
     public function show(KnowledgeBase $knowledgeBase): Response
     {
+        if (! $knowledgeBase->is_published) {
+            abort(404);
+        }
+
         return Inertia::render('Portal/KnowledgeBaseShow', [
             'article' => $knowledgeBase->load('category', 'author'),
         ]);

@@ -21,25 +21,26 @@ type Props = {
 
 const statusBadge = (status: string) => {
     const map: Record<string, string> = {
-        open: 'bg-blue-100 text-blue-700',
-        in_progress: 'bg-amber-100 text-amber-700',
-        resolved: 'bg-emerald-100 text-emerald-700',
-        closed: 'bg-slate-100 text-slate-700',
+        open: 'bg-blue-50 text-blue-700',
+        in_progress: 'bg-orange-50 text-orange-700',
+        resolved: 'bg-emerald-50 text-emerald-700',
+        closed: 'bg-slate-100 text-slate-600',
+        cancelled: 'bg-rose-50 text-rose-700',
     };
-    return map[status] ?? 'bg-slate-100 text-slate-700';
+    return map[status] ?? 'bg-slate-100 text-slate-600';
 };
 
 const priorityBadge = (priority: string) => {
     const map: Record<string, string> = {
-        critical: 'bg-rose-100 text-rose-700',
-        high: 'bg-orange-100 text-orange-700',
-        medium: 'bg-amber-100 text-amber-700',
-        low: 'bg-green-100 text-green-700',
+        critical: 'bg-rose-50 text-rose-700',
+        high: 'bg-orange-50 text-orange-700',
+        medium: 'bg-amber-50 text-amber-700',
+        low: 'bg-green-50 text-green-700',
     };
-    return map[priority] ?? 'bg-slate-100 text-slate-700';
+    return map[priority] ?? 'bg-slate-100 text-slate-600';
 };
 
-const statusLabel: Record<string, string> = { open: 'Menunggu', in_progress: 'Diproses', resolved: 'Selesai', closed: 'Ditutup' };
+const statusLabel: Record<string, string> = { open: 'Terbuka', in_progress: 'Sedang Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
 const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
 
 export default function PortalTicketIndex({ tickets, filters, statuses, priorities }: Props) {
@@ -52,29 +53,33 @@ export default function PortalTicketIndex({ tickets, filters, statuses, prioriti
     return (
         <PortalLayout>
             {flash.success && (
-                <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>
+                <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>
             )}
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Tiket Saya</h1>
+                    <h1 className="text-lg font-semibold text-slate-900">Tiket Saya</h1>
                     <p className="text-sm text-slate-500">Kelola dan pantau status tiket Anda</p>
                 </div>
-                <Link href="/portal/tickets/create" className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-                    + Buat Tiket Baru
+                <Link href="/portal/tickets/create" className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>add</span>
+                    Buat Tiket Baru
                 </Link>
             </div>
 
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-                <input
-                    type="text"
-                    placeholder="Cari tiket..."
-                    className="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    defaultValue={filters.search ?? ''}
-                    onChange={(e) => updateFilter('search', e.target.value)}
-                />
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '18px' }}>search</span>
+                    <input
+                        type="text"
+                        placeholder="Cari tiket..."
+                        className="w-full rounded-md border border-slate-300 py-2 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        defaultValue={filters.search ?? ''}
+                        onChange={(e) => updateFilter('search', e.target.value)}
+                    />
+                </div>
                 <select
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
                     value={filters.status ?? ''}
                     onChange={(e) => updateFilter('status', e.target.value)}
                 >
@@ -82,7 +87,7 @@ export default function PortalTicketIndex({ tickets, filters, statuses, prioriti
                     {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
                 </select>
                 <select
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
                     value={filters.priority ?? ''}
                     onChange={(e) => updateFilter('priority', e.target.value)}
                 >
@@ -91,43 +96,31 @@ export default function PortalTicketIndex({ tickets, filters, statuses, prioriti
                 </select>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                 {tickets.data.length === 0 ? (
                     <div className="px-5 py-12 text-center">
-                        <p className="text-slate-500">Belum ada tiket.</p>
-                        <Link href="/portal/tickets/create" className="mt-3 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Buat Tiket</Link>
+                        <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>inbox</span>
+                        <p className="mt-2 text-slate-400">Belum ada tiket.</p>
+                        <Link href="/portal/tickets/create" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Buat Tiket</Link>
                     </div>
                 ) : (
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-slate-50 text-left text-slate-600">
-                            <tr>
-                                <th className="px-5 py-3 font-medium">Judul</th>
-                                <th className="px-5 py-3 font-medium">Kategori</th>
-                                <th className="px-5 py-3 font-medium">Prioritas</th>
-                                <th className="px-5 py-3 font-medium">Status</th>
-                                <th className="px-5 py-3 font-medium">Petugas</th>
-                                <th className="px-5 py-3 font-medium">Tanggal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tickets.data.map((ticket) => (
-                                <tr key={ticket.id} className="border-t border-slate-100 hover:bg-slate-50">
-                                    <td className="px-5 py-3">
-                                        <Link href={`/portal/tickets/${ticket.id}`} className="font-medium text-indigo-600 hover:text-indigo-800">{ticket.title}</Link>
-                                    </td>
-                                    <td className="px-5 py-3 text-slate-600">{ticket.category?.name ?? '-'}</td>
-                                    <td className="px-5 py-3">
-                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span>
-                                    </td>
-                                    <td className="px-5 py-3">
-                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
-                                    </td>
-                                    <td className="px-5 py-3 text-slate-600">{ticket.assignee?.name ?? 'Belum ditugaskan'}</td>
-                                    <td className="px-5 py-3 text-slate-500">{ticket.created_at ?? '-'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div className="divide-y divide-slate-100">
+                        {tickets.data.map((ticket) => (
+                            <Link key={ticket.id} href={`/portal/tickets/${ticket.id}`} className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-xs text-slate-400">#{ticket.uuid?.slice(0, 8)}</span>
+                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
+                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span>
+                                    </div>
+                                    <h4 className="mt-1 truncate text-sm font-medium text-slate-900">{ticket.title}</h4>
+                                    <p className="mt-0.5 text-xs text-slate-500">{ticket.category?.name ?? '-'} &middot; {ticket.assignee?.name ?? 'Belum ditugaskan'}</p>
+                                </div>
+                                <div className="text-right text-xs text-slate-400">{ticket.created_at ?? '-'}</div>
+                                <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '20px' }}>chevron_right</span>
+                            </Link>
+                        ))}
+                    </div>
                 )}
             </div>
         </PortalLayout>

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
 use Illuminate\Support\Str;
 
 class Ticket extends Model
@@ -21,6 +20,7 @@ class Ticket extends Model
         'assigned_to',
         'sla_deadline',
         'resolved_at',
+        'cancelled_at',
         'rating',
         'rating_comment',
     ];
@@ -30,6 +30,7 @@ class Ticket extends Model
         return [
             'sla_deadline' => 'datetime',
             'resolved_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -80,17 +81,21 @@ class Ticket extends Model
     public function isOverdue(): bool
     {
         return $this->sla_deadline !== null
-            && $this->status !== 'resolved'
-            && $this->status !== 'closed'
+            && ! in_array($this->status, ['resolved', 'closed', 'cancelled'])
             && now()->isAfter($this->sla_deadline);
     }
 
     public function isSlaWarning(): bool
     {
-        if (! $this->sla_deadline || in_array($this->status, ['resolved', 'closed'])) {
+        if (! $this->sla_deadline || in_array($this->status, ['resolved', 'closed', 'cancelled'])) {
             return false;
         }
 
         return now()->diffInHours($this->sla_deadline, false) <= 4 && now()->diffInHours($this->sla_deadline, false) > 0;
+    }
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['open', 'in_progress']);
     }
 }

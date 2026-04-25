@@ -9,18 +9,22 @@ class UpdateTicketRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return $this->user() !== null;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'assigned_to' => $this->filled('assigned_to') && $this->input('assigned_to') !== '' ? (int) $this->input('assigned_to') : null,
+        ]);
     }
 
     public function rules(): array
     {
         return [
-            'category_id' => ['required', 'exists:categories,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
             'priority' => ['required', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'status' => ['required', Rule::in(['open', 'in_progress', 'resolved', 'closed'])],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'status' => ['required', Rule::in(['open', 'in_progress', 'resolved', 'closed', 'cancelled'])],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
         ];
     }
 }

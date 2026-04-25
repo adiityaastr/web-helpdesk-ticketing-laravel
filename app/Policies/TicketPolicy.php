@@ -45,7 +45,7 @@ class TicketPolicy
             return true;
         }
 
-        return $ticket->user_id === $user->id && $ticket->status === 'open';
+        return $ticket->user_id === $user->id && in_array($ticket->status, ['open', 'cancelled']);
     }
 
     public function comment(User $user, Ticket $ticket): bool
@@ -55,5 +55,14 @@ class TicketPolicy
         }
 
         return $ticket->user_id === $user->id;
+    }
+
+    public function cancel(User $user, Ticket $ticket): bool
+    {
+        if ($user->hasAnyRole(['staff', 'admin'])) {
+            return $ticket->isCancellable();
+        }
+
+        return $ticket->user_id === $user->id && $ticket->isCancellable();
     }
 }

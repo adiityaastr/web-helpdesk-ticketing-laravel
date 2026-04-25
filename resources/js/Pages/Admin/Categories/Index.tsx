@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { usePage } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '../Layout';
 
 type CategoryItem = {
@@ -18,87 +18,92 @@ export default function CategoryIndex({ categories }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
     const [showModal, setShowModal] = useState(false);
     const [editCategory, setEditCategory] = useState<CategoryItem | null>(null);
-    const [form, setForm] = useState({ name: '', description: '' });
+
+    const createForm = useForm({
+        name: '',
+        description: '',
+    });
+
+    const editForm = useForm({
+        name: '',
+        description: '',
+    });
 
     const openCreate = () => {
         setEditCategory(null);
-        setForm({ name: '', description: '' });
+        createForm.reset();
         setShowModal(true);
     };
 
     const openEdit = (category: CategoryItem) => {
         setEditCategory(category);
-        setForm({ name: category.name, description: category.description ?? '' });
+        editForm.setData({
+            name: category.name,
+            description: category.description ?? '',
+        });
         setShowModal(true);
     };
 
-    const submit = (e: FormEvent) => {
+    const submitCreate = (e: FormEvent) => {
         e.preventDefault();
-        const url = editCategory ? `/admin/categories/${editCategory.id}` : '/admin/categories';
-        const method = editCategory ? 'PUT' : 'POST';
-
-        fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+        createForm.post('/admin/categories', {
+            onSuccess: () => {
+                setShowModal(false);
+                createForm.reset();
             },
-            body: JSON.stringify(form),
-        }).then((response) => {
-            if (response.ok) {
-                window.location.reload();
-            }
+        });
+    };
+
+    const submitEdit = (e: FormEvent) => {
+        e.preventDefault();
+        if (!editCategory) return;
+        editForm.put(`/admin/categories/${editCategory.id}`, {
+            onSuccess: () => {
+                setShowModal(false);
+            },
         });
     };
 
     const handleDelete = (id: number) => {
         if (confirm('Yakin ingin menghapus kategori ini?')) {
-            fetch(`/admin/categories/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                },
-            }).then(() => window.location.reload());
+            router.delete(`/admin/categories/${id}`);
         }
     };
 
     return (
         <AdminLayout>
-            {flash.success && <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>}
+            {flash.success && <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>}
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Kelola Kategori</h1>
+                    <h1 className="text-lg font-semibold text-slate-900">Kelola Kategori</h1>
                     <p className="text-sm text-slate-500">Kelola kategori tiket helpdesk</p>
                 </div>
-                <button onClick={openCreate} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">+ Tambah Kategori</button>
+                <button onClick={openCreate} className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Tambah Kategori</button>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-left text-slate-600">
+                    <thead className="border-b border-slate-200 text-left">
                         <tr>
-                            <th className="px-5 py-3 font-medium">Nama</th>
-                            <th className="px-5 py-3 font-medium">Slug</th>
-                            <th className="px-5 py-3 font-medium">Deskripsi</th>
-                            <th className="px-5 py-3 font-medium">Jumlah Tiket</th>
-                            <th className="px-5 py-3 font-medium">Aksi</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Nama</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Slug</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Deskripsi</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Jumlah Tiket</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {categories.data.map((category) => (
-                            <tr key={category.id} className="border-t border-slate-100 hover:bg-slate-50">
-                                <td className="px-5 py-3 font-medium text-slate-800">{category.name}</td>
-                                <td className="px-5 py-3 font-mono text-xs text-slate-500">{category.slug}</td>
-                                <td className="px-5 py-3 text-slate-600">{category.description ?? '-'}</td>
-                                <td className="px-5 py-3"><span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{category.tickets_count}</span></td>
+                            <tr key={category.id} className="border-b border-slate-100 last:border-0">
+                                <td className="px-5 py-3 font-medium text-slate-900">{category.name}</td>
+                                <td className="px-5 py-3 font-mono text-xs text-slate-400">{category.slug}</td>
+                                <td className="px-5 py-3 text-slate-500">{category.description ?? '-'}</td>
+                                <td className="px-5 py-3"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">{category.tickets_count}</span></td>
                                 <td className="px-5 py-3">
-                                    <div className="flex gap-2">
-                                        <button onClick={() => openEdit(category)} className="text-sm text-indigo-600 hover:text-indigo-800">Edit</button>
-                                        <button onClick={() => handleDelete(category.id)} className="text-sm text-rose-600 hover:text-rose-800">Hapus</button>
+                                    <div className="flex gap-3">
+                                        <button onClick={() => openEdit(category)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
+                                        <button onClick={() => handleDelete(category.id)} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
                                     </div>
                                 </td>
                             </tr>
@@ -108,23 +113,43 @@ export default function CategoryIndex({ categories }: Props) {
             </div>
 
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowModal(false)}>
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="mb-4 text-lg font-semibold text-slate-800">{editCategory ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
-                        <form onSubmit={submit} className="space-y-4">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Nama</label>
-                                <input className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">Deskripsi</label>
-                                <textarea className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">{editCategory ? 'Simpan' : 'Tambah'}</button>
-                                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Batal</button>
-                            </div>
-                        </form>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowModal(false)}>
+                    <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="mb-4 text-sm font-semibold text-slate-900">{editCategory ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
+
+                        {editCategory ? (
+                            <form onSubmit={submitEdit} className="space-y-4">
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Nama</label>
+                                    <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.name} onChange={(e) => editForm.setData('name', e.target.value)} />
+                                    {editForm.errors.name && <p className="mt-1 text-xs text-rose-600">{editForm.errors.name}</p>}
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Deskripsi</label>
+                                    <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" rows={3} value={editForm.data.description} onChange={(e) => editForm.setData('description', e.target.value)} />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700" disabled={editForm.processing}>Simpan</button>
+                                    <button type="button" onClick={() => setShowModal(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Batal</button>
+                                </div>
+                            </form>
+                        ) : (
+                            <form onSubmit={submitCreate} className="space-y-4">
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Nama</label>
+                                    <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.name} onChange={(e) => createForm.setData('name', e.target.value)} />
+                                    {createForm.errors.name && <p className="mt-1 text-xs text-rose-600">{createForm.errors.name}</p>}
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Deskripsi</label>
+                                    <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" rows={3} value={createForm.data.description} onChange={(e) => createForm.setData('description', e.target.value)} />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700" disabled={createForm.processing}>Tambah</button>
+                                    <button type="button" onClick={() => setShowModal(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Batal</button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </div>
             )}
