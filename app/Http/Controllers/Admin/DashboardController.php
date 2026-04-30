@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\KnowledgeBase;
 use App\Models\Ticket;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,34 +13,67 @@ class DashboardController extends Controller
 {
     public function index(): Response
     {
-        $stats = [
-            'total' => Ticket::query()->count(),
-            'open' => Ticket::query()->where('status', 'open')->count(),
-            'in_progress' => Ticket::query()->where('status', 'in_progress')->count(),
-            'resolved' => Ticket::query()->where('status', 'resolved')->count(),
-            'closed' => Ticket::query()->where('status', 'closed')->count(),
-            'overdue' => Ticket::query()
-                ->whereNotIn('status', ['resolved', 'closed'])
-                ->whereNotNull('sla_deadline')
-                ->where('sla_deadline', '<', now())
-                ->count(),
-        ];
+        $stats = Cache::remember('admin_dashboard_stats', 300, function () {
+            $row = Ticket::query()
+                ->selectRaw("
+                    COUNT(*) as total,
+                    COUNT(*) FILTER (WHERE status = 'open') as open,
+                    COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress,
+                    COUNT(*) FILTER (WHERE status = 'resolved') as resolved,
+                    COUNT(*) FILTER (WHERE status = 'closed') as closed,
+                    COUNT(*) FILTER (WHERE status NOT IN ('resolved', 'closed') AND sla_deadline IS NOT NULL AND sla_deadline < NOW()) as overdue
+                ")
+                ->first();
 
-        $priorityChart = Ticket::query()
-            ->selectRaw('priority, COUNT(*) as total')
-            ->groupBy('priority')
-            ->pluck('total', 'priority');
+            return [
+                'total' => (int) $row->total,
+                'open' => (int) $row->open,
+                'in_progress' => (int) $row->in_progress,
+                'resolved' => (int) $row->resolved,
+                'closed' => (int) $row->closed,
+                'overdue' => (int) $row->overdue,
+            ];
+        });
 
-        $statusChart = Ticket::query()
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        $charts = Cache::remember('admin_dashboard_charts', 300, function () {
+            $priorityChart = Ticket::query()
+                ->selectRaw('priority, COUNT(*) as total')
+                ->groupBy('priority')
+                ->pluck('total', 'priority');
+
+            $statusChart = Ticket::query()
+                ->selectRaw('status, COUNT(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status');
+
+            return [
+                'priorityChart' => [
+                    'labels' => $priorityChart->keys()->values(),
+                    'values' => $priorityChart->values(),
+                ],
+                'statusChart' => [
+                    'labels' => $statusChart->keys()->values(),
+                    'values' => $statusChart->values(),
+                ],
+            ];
+        });
 
         $recentTickets = Ticket::query()
             ->with(['category', 'reporter', 'assignee'])
             ->latest()
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'uuid' => $t->uuid,
+                'title' => $t->title,
+                'status' => $t->status,
+                'priority' => $t->priority,
+                'category' => $t->category?->name,
+                'reporter' => $t->reporter?->name,
+                'assignee' => $t->assignee?->name,
+                'created_at' => $t->created_at?->toDateTimeString(),
+            ]);
 
         $staffWorkload = User::query()
             ->role(['staff', 'admin'])
@@ -54,25 +87,9 @@ class DashboardController extends Controller
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
-            'priorityChart' => [
-                'labels' => $priorityChart->keys()->values(),
-                'values' => $priorityChart->values(),
-            ],
-            'statusChart' => [
-                'labels' => $statusChart->keys()->values(),
-                'values' => $statusChart->values(),
-            ],
-            'recentTickets' => $recentTickets->map(fn ($t) => [
-                'id' => $t->id,
-                'uuid' => $t->uuid,
-                'title' => $t->title,
-                'status' => $t->status,
-                'priority' => $t->priority,
-                'category' => $t->category?->name,
-                'reporter' => $t->reporter?->name,
-                'assignee' => $t->assignee?->name,
-                'created_at' => $t->created_at?->toDateTimeString(),
-            ]),
+            'priorityChart' => $charts['priorityChart'],
+            'statusChart' => $charts['statusChart'],
+            'recentTickets' => $recentTickets,
             'staffWorkload' => $staffWorkload,
         ]);
     }

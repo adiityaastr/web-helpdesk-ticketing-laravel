@@ -5,15 +5,13 @@ import { createRoot } from 'react-dom/client';
 
 createInertiaApp({
     resolve: (name) => {
-        const pages = import.meta.glob('./Pages/**/*.tsx', { eager: true });
-        const page = pages[`./Pages/${name}.tsx`];
-
-        if (!page) {
+        const pages = import.meta.glob('./Pages/**/*.tsx');
+        const importFn = pages[`./Pages/${name}.tsx`];
+        if (!importFn) {
             console.error(`Page ${name} not found`);
-            return { default: () => null };
+            return Promise.resolve({ default: () => React.createElement('div', null, `Halaman ${name} tidak ditemukan.`) });
         }
-
-        return page;
+        return importFn();
     },
     setup({ el, App, props }) {
         createRoot(el).render(React.createElement(App, props));

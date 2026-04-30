@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Notifications\TicketActivityNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -102,6 +103,10 @@ class TicketController extends Controller
 
         $this->notifyRelatedUsers($ticket, 'created');
 
+        Cache::forget("portal_dashboard_stats_{$request->user()->id}");
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
+
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket berhasil dibuat.');
     }
 
@@ -178,6 +183,10 @@ class TicketController extends Controller
 
         $this->notifyRelatedUsers($ticket, 'cancelled');
 
+        Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
+
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket berhasil dibatalkan.');
     }
 
@@ -192,6 +201,10 @@ class TicketController extends Controller
         }
 
         $ticket->delete();
+
+        Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
 
         return redirect()->route('portal.tickets.index')->with('success', 'Tiket berhasil dihapus.');
     }

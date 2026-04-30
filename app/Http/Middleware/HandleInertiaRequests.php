@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -16,23 +17,27 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'phone' => $request->user()->phone,
-                    'department' => $request->user()->department,
-                    'roles' => $request->user()->roles->pluck('name')->values(),
-                    'is_admin' => $request->user()->isAdmin(),
-                    'is_staff' => $request->user()->isStaff(),
-                    'is_customer' => $request->user()->isCustomer(),
-                ] : null,
+                'user' => $user ? Cache::remember("user_auth_{$user->id}", 300, fn () => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'department' => $user->department,
+                    'roles' => $user->roles->pluck('name')->values(),
+                    'is_admin' => $user->isAdmin(),
+                    'is_staff' => $user->isStaff(),
+                    'is_customer' => $user->isCustomer(),
+                ]) : null,
             ],
             'notifications' => [
-                'unread_count' => fn () => $request->user()?->unreadNotifications()->count() ?? 0,
+                'unread_count' => fn () => $user
+                    ? Cache::remember("user_notif_count_{$user->id}", 60, fn () => $user->unreadNotifications()->count())
+                    : 0,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

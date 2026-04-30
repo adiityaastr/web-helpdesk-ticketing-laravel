@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\KnowledgeBaseController as AdminKnowledgeBaseController;
+use App\Http\Controllers\Admin\SawController;
 use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
@@ -54,6 +55,9 @@ Route::middleware(['auth', 'role:staff|admin'])->prefix('admin')->name('admin.')
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('knowledge-base', AdminKnowledgeBaseController::class)->except(['create', 'edit', 'show']);
     Route::resource('templates', TemplateController::class)->except(['create', 'edit', 'show']);
+    Route::get('/saw', [SawController::class, 'index'])->name('saw.index');
+    Route::post('/saw/weights', [SawController::class, 'updateWeights'])->name('saw.update-weights');
+    Route::post('/saw/seed', [SawController::class, 'seed'])->name('saw.seed');
 });
 
 Route::middleware('auth')->group(function (): void {

@@ -12,8 +12,10 @@ use App\Models\Ticket;
 use App\Models\TicketTemplate;
 use App\Models\User;
 use App\Notifications\TicketActivityNotification;
+use App\Services\SawService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -39,9 +41,29 @@ class TicketController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $sawScores = [];
+        if ($request->string('sort')->toString() === 'saw_score') {
+            try {
+                $saw = new SawService();
+                $sawScores = $saw->calculateScores();
+            } catch (\Exception) {
+                $sawScores = [];
+            }
+        }
+
+        $ticketData = TicketResource::collection($tickets)->resolve();
+
+        if (! empty($sawScores)) {
+            foreach ($ticketData as &$t) {
+                $t['saw_score'] = $sawScores[$t['id']] ?? null;
+            }
+        }
+
         return Inertia::render('Admin/Tickets/Index', [
-            'tickets' => TicketResource::collection($tickets),
-            'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search']),
+            'tickets' => [
+                'data' => $ticketData,
+            ],
+            'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search', 'sort']),
             'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
@@ -120,6 +142,9 @@ class TicketController extends Controller
 
         $ticket->update($payload);
 
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
+
         $changes = [];
         if ($oldStatus !== $ticket->status) {
             $changes[] = "Status berubah dari {$oldStatus} menjadi {$ticket->status}";
@@ -151,6 +176,9 @@ class TicketController extends Controller
         }
 
         $ticket->delete();
+
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
 
         return redirect()->route('admin.tickets.index')->with('success', 'Tiket berhasil dihapus.');
     }
@@ -185,6 +213,9 @@ class TicketController extends Controller
         if (! $isInternal) {
             $this->notifyRelatedUsers($ticket, 'commented', $comment);
         }
+
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
 
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Komentar berhasil ditambahkan.');
     }
