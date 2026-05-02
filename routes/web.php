@@ -11,11 +11,16 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Portal\DashboardController as PortalDashboardController;
 use App\Http\Controllers\Portal\KnowledgeBaseController as PortalKnowledgeBaseController;
 use App\Http\Controllers\Portal\TicketController as PortalTicketController;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    if (auth()->check()) {
-        if (auth()->user()->hasAnyRole(['staff', 'admin'])) {
+Route::get('/', function (): RedirectResponse {
+    /** @var \App\Models\User|null $user */
+    $user = Auth::user();
+
+    if ($user) {
+        if ($user->hasAnyRole(['staff', 'admin'])) {
             return redirect()->route('admin.dashboard');
         }
         return redirect()->route('portal.dashboard');
