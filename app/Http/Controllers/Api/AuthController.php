@@ -50,6 +50,7 @@ class AuthController extends Controller
             ]);
         }
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -61,7 +62,9 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        /** @var \App\Models\User|null $user */
+        $user = $request->user();
+        $user?->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out.']);
     }
