@@ -11,6 +11,7 @@ type Ticket = {
     status: string;
     sla_deadline: string | null;
     resolved_at: string | null;
+    resolved_confirmed_at: string | null;
     cancelled_at: string | null;
     rating: number | null;
     rating_comment: string | null;
@@ -70,6 +71,7 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
     const staffOrAdmin = roles.includes('staff') || roles.includes('admin');
     const [ratingValue, setRatingValue] = useState(ticket.rating ?? 0);
     const [hoverRating, setHoverRating] = useState(0);
+    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
 
     const commentForm = useForm({
         message: '',
@@ -82,6 +84,9 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
     });
 
     const cancelForm = useForm({});
+    const confirmForm = useForm({});
+    const rejectForm = useForm({ reason: '' });
+    const [showReject, setShowReject] = useState(false);
 
     const ticketPath = `/portal/tickets/${ticket.id}`;
 
@@ -162,19 +167,6 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
                 </div>
             </div>
 
-            {ticket.is_overdue && (
-                <div className="mb-4 flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>warning</span>
-                    Tiket ini sudah melampaui batas waktu SLA!
-                </div>
-            )}
-            {ticket.is_sla_warning && !ticket.is_overdue && (
-                <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>schedule</span>
-                    Batas waktu SLA akan segera berakhir!
-                </div>
-            )}
-
             <div className="grid gap-4 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-4">
                     <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -186,28 +178,36 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
                         <div className="rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="mb-4 text-sm font-semibold text-slate-900">Komentar ({comments.length})</h2>
 
-                            <form onSubmit={submitComment} className="mb-6 space-y-3">
-                                <textarea
-                                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                    rows={3}
-                                    placeholder="Tulis komentar..."
-                                    value={commentForm.data.message}
-                                    onChange={(e) => commentForm.setData('message', e.target.value)}
-                                />
-                                {commentForm.errors.message && <p className="text-xs text-rose-600">{commentForm.errors.message}</p>}
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept=".jpg,.jpeg,.png,.pdf"
-                                        className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700"
-                                        onChange={(e) => commentForm.setData('attachments', Array.from(e.target.files ?? []))}
-                                    />
-                                    <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={commentForm.processing}>
-                                        Kirim
-                                    </button>
+                            {commentLocked ? (
+                                <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                    <span className="material-symbols-outlined align-middle mr-1" style={{ fontSize: '16px' }}>lock</span>
+                                    Kolom komentar ditutup — tiket sudah selesai.
+                                    <p className="mt-1 text-xs text-slate-400">Jika kendala belum terselesaikan, silakan buat <Link href="/portal/tickets/create" className="font-medium underline hover:text-slate-600">tiket baru</Link>.</p>
                                 </div>
-                            </form>
+                            ) : (
+                                <form onSubmit={submitComment} className="mb-6 space-y-3">
+                                    <textarea
+                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        rows={3}
+                                        placeholder="Tulis komentar..."
+                                        value={commentForm.data.message}
+                                        onChange={(e) => commentForm.setData('message', e.target.value)}
+                                    />
+                                    {commentForm.errors.message && <p className="text-xs text-rose-600">{commentForm.errors.message}</p>}
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700"
+                                            onChange={(e) => commentForm.setData('attachments', Array.from(e.target.files ?? []))}
+                                        />
+                                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={commentForm.processing}>
+                                            Kirim
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
 
                             <div className="space-y-3">
                                 {comments.length === 0 && <p className="text-sm text-slate-400">Belum ada komentar.</p>}
@@ -248,6 +248,54 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {ticket.status === 'resolved' && !ticket.resolved_confirmed_at && (
+                        <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
+                            <h2 className="mb-2 text-sm font-semibold text-teal-900">Konfirmasi Penyelesaian</h2>
+                            <p className="mb-4 text-sm text-teal-700">Admin telah menyelesaikan tiket ini. Apakah permasalahan Anda sudah diperbaiki?</p>
+
+                            {!showReject ? (
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            confirmForm.post(`${ticketPath}/confirm`);
+                                        }}
+                                        className="rounded-md bg-teal-600 px-5 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                                        disabled={confirmForm.processing}
+                                    >
+                                        Ya, Sudah Selesai
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowReject(true)}
+                                        className="rounded-md border border-rose-200 bg-white px-5 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                                    >
+                                        Belum, Masih Ada Masalah
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={(e) => { e.preventDefault(); rejectForm.post(`${ticketPath}/reject`); }} className="space-y-3">
+                                    <textarea
+                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        rows={3}
+                                        placeholder="Jelaskan kendala yang masih terjadi..."
+                                        value={rejectForm.data.reason}
+                                        onChange={(e) => rejectForm.setData('reason', e.target.value)}
+                                    />
+                                    {rejectForm.errors.reason && <p className="text-xs text-rose-600">{rejectForm.errors.reason}</p>}
+                                    <div className="flex gap-3">
+                                        <button type="submit" className="rounded-md bg-rose-600 px-5 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50" disabled={rejectForm.processing}>
+                                            Kirim & Buka Kembali
+                                        </button>
+                                        <button type="button" onClick={() => { setShowReject(false); rejectForm.reset('reason'); }} className="rounded-md border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                            Batal
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
                         </div>
                     )}
 
@@ -322,12 +370,6 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
                                 <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '18px' }}>support_agent</span>
                                 <div><dt className="text-slate-400">Ditugaskan ke</dt><dd className="font-medium text-slate-900">{ticket.assignee?.name ?? 'Belum ditugaskan'}</dd></div>
                             </div>
-                            {ticket.sla_deadline && (
-                                <div className="flex items-start gap-3">
-                                    <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '18px' }}>schedule</span>
-                                    <div><dt className="text-slate-400">Batas SLA</dt><dd className={`font-medium ${ticket.is_overdue ? 'text-rose-600' : ticket.is_sla_warning ? 'text-amber-600' : 'text-slate-900'}`}>{ticket.sla_deadline}</dd></div>
-                                </div>
-                            )}
                             {ticket.resolved_at && (
                                 <div className="flex items-start gap-3">
                                     <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '18px' }}>check_circle</span>

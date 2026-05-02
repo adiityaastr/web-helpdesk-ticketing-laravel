@@ -11,6 +11,7 @@ type Ticket = {
     status: string;
     sla_deadline: string | null;
     resolved_at: string | null;
+    resolved_confirmed_at: string | null;
     cancelled_at: string | null;
     rating: number | null;
     rating_comment: string | null;
@@ -75,7 +76,7 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
 
     const updateForm = useForm({
         priority: ticket.priority ?? 'medium',
-        status: ticket.status ?? 'open',
+        status: ticket.status && ticket.status !== 'open' ? ticket.status : '',
         assigned_to: String(ticket.assignee?.id ?? ''),
     });
 
@@ -85,11 +86,12 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
         attachments: [] as File[],
     });
 
+    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
+
     const submitUpdate = (e: FormEvent) => {
         e.preventDefault();
         updateForm.put(`/admin/tickets/${ticket.id}`, {
             onSuccess: () => {
-                updateForm.reset();
                 router.reload({ only: ['ticket', 'comments', 'activityLogs'] });
             },
         });
@@ -136,7 +138,6 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                         <h1 className="text-lg font-semibold text-slate-900">{ticket.title}</h1>
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span>
-                        {ticket.is_overdue && <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700">SLA Terlambat</span>}
                     </div>
                     <p className="mt-1 text-sm text-slate-500">#{ticket.uuid?.slice(0, 8)} -- Dibuat {ticket.created_at}</p>
                 </div>
@@ -155,10 +156,6 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                 </div>
             </div>
 
-            {ticket.is_sla_warning && !ticket.is_overdue && (
-                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">Batas waktu SLA akan segera berakhir!</div>
-            )}
-
             <div className="grid gap-4 lg:grid-cols-3">
                 <div className="space-y-4 lg:col-span-2">
                     <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -173,6 +170,7 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                             <div>
                                 <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
                                 <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.status} onChange={(e) => updateForm.setData('status', e.target.value)}>
+                                    <option value="" disabled>Pilih status...</option>
                                     {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
                                 </select>
                                 {updateForm.errors.status && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.status}</p>}
@@ -202,39 +200,51 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                     <div className="rounded-lg border border-slate-200 bg-white p-5">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-sm font-semibold text-slate-900">Komentar & Catatan</h2>
-                            <label className="flex items-center gap-2 text-sm">
-                                <input type="checkbox" checked={commentForm.data.is_internal} onChange={(e) => commentForm.setData('is_internal', e.target.checked)} className="rounded border-slate-300" />
-                                <span className="text-slate-500">Catatan Internal</span>
-                            </label>
+                            {!commentLocked && (
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={commentForm.data.is_internal} onChange={(e) => commentForm.setData('is_internal', e.target.checked)} className="rounded border-slate-300" />
+                                    <span className="text-slate-500">Catatan Internal</span>
+                                </label>
+                            )}
                         </div>
 
-                        {templates.length > 0 && (
-                            <div className="mb-3">
-                                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)}>
-                                    <option value="">Gunakan template...</option>
-                                    {templates.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-                                </select>
+                        {commentLocked ? (
+                            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                <span className="material-symbols-outlined align-middle mr-1" style={{ fontSize: '16px' }}>lock</span>
+                                Kolom komentar ditutup — tiket sudah selesai.
+                                <p className="mt-1 text-xs text-slate-400">Jika kendala belum terselesaikan, silakan buat <Link href="/portal/tickets/create" className="font-medium underline hover:text-slate-600">tiket baru</Link>.</p>
                             </div>
-                        )}
+                        ) : (
+                            <>
+                                {templates.length > 0 && (
+                                    <div className="mb-3">
+                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)}>
+                                            <option value="">Gunakan template...</option>
+                                            {templates.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+                                        </select>
+                                    </div>
+                                )}
 
-                        <form onSubmit={submitComment} className="mb-6 space-y-3">
-                            <textarea
-                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                rows={3}
-                                placeholder={commentForm.data.is_internal ? "Tulis catatan internal..." : "Tulis komentar..."}
-                                value={commentForm.data.message}
-                                onChange={(e) => commentForm.setData('message', e.target.value)}
-                            />
-                            {commentForm.errors.message && <p className="text-xs text-rose-600">{commentForm.errors.message}</p>}
-                            {commentForm.errors.attachments && <p className="text-xs text-rose-600">{commentForm.errors.attachments}</p>}
-                            {commentForm.errors.is_internal && <p className="text-xs text-rose-600">{commentForm.errors.is_internal}</p>}
-                            <div className="flex items-center gap-3">
-                                <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700" onChange={(e) => commentForm.setData('attachments', Array.from(e.target.files ?? []))} />
-                                <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={commentForm.processing}>
-                                    {commentForm.data.is_internal ? 'Simpan Catatan' : 'Kirim'}
-                                </button>
-                            </div>
-                        </form>
+                                <form onSubmit={submitComment} className="mb-6 space-y-3">
+                                    <textarea
+                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                        rows={3}
+                                        placeholder={commentForm.data.is_internal ? "Tulis catatan internal..." : "Tulis komentar..."}
+                                        value={commentForm.data.message}
+                                        onChange={(e) => commentForm.setData('message', e.target.value)}
+                                    />
+                                    {commentForm.errors.message && <p className="text-xs text-rose-600">{commentForm.errors.message}</p>}
+                                    {commentForm.errors.attachments && <p className="text-xs text-rose-600">{commentForm.errors.attachments}</p>}
+                                    {commentForm.errors.is_internal && <p className="text-xs text-rose-600">{commentForm.errors.is_internal}</p>}
+                                    <div className="flex items-center gap-3">
+                                        <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700" onChange={(e) => commentForm.setData('attachments', Array.from(e.target.files ?? []))} />
+                                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={commentForm.processing}>
+                                            {commentForm.data.is_internal ? 'Simpan Catatan' : 'Kirim'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </>
+                        )}
 
                         <div className="space-y-3">
                             {comments.map((comment) => (
@@ -284,8 +294,8 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                             {ticket.reporter?.department && <div><dt className="text-slate-400">Departemen</dt><dd className="font-medium text-slate-900">{ticket.reporter.department}</dd></div>}
                             <div><dt className="text-slate-400">Kategori</dt><dd className="font-medium text-slate-900">{ticket.category?.name ?? '-'}</dd></div>
                             <div><dt className="text-slate-400">Ditugaskan</dt><dd className="font-medium text-slate-900">{ticket.assignee?.name ?? 'Belum ditugaskan'}</dd></div>
-                            {ticket.sla_deadline && <div><dt className="text-slate-400">Batas SLA</dt><dd className={`font-medium ${ticket.is_overdue ? 'text-rose-600' : ticket.is_sla_warning ? 'text-amber-600' : 'text-slate-900'}`}>{ticket.sla_deadline}</dd></div>}
                             {ticket.resolved_at && <div><dt className="text-slate-400">Diselesaikan</dt><dd className="font-medium text-slate-900">{ticket.resolved_at}</dd></div>}
+                            {ticket.resolved_confirmed_at && <div><dt className="text-slate-400">Dikonfirmasi</dt><dd className="font-medium text-emerald-600">{ticket.resolved_confirmed_at}</dd></div>}
                             {ticket.cancelled_at && <div><dt className="text-slate-400">Dibatalkan</dt><dd className="font-medium text-rose-600">{ticket.cancelled_at}</dd></div>}
                         </dl>
                     </div>

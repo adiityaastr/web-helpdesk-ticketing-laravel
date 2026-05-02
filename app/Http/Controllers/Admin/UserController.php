@@ -19,8 +19,9 @@ class UserController extends Controller
         $userQuery = User::query()
             ->with('roles')
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->string('search')}%")
-                  ->orWhere('email', 'like', "%{$request->string('search')}%");
+                $search = addcslashes($request->string('search')->toString(), '%_');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             }))
             ->when($request->string('role')->isNotEmpty(), fn ($query) => $query->role($request->string('role')));
 
@@ -35,7 +36,7 @@ class UserController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'department' => $user->department,
-            'roles' => $user->roles->pluck('name')->values(),
+            'roles' => $user->roles->pluck('name')->values()->all(),
             'created_at' => $user->created_at?->toDateTimeString(),
         ]);
 

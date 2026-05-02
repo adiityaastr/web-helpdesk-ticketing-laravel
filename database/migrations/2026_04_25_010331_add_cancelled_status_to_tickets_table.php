@@ -15,6 +15,9 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             DB::statement("ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_status_check");
             DB::statement("ALTER TABLE tickets ADD CONSTRAINT tickets_status_check CHECK (status IN ('open', 'in_progress', 'resolved', 'closed', 'cancelled'))");
+        } elseif ($driver === 'sqlite') {
+            // SQLite doesn't support MODIFY COLUMN; the column is already VARCHAR
+            // and SQLite doesn't enforce CHECK on existing rows
         } else {
             DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('open','in_progress','resolved','closed','cancelled') NOT NULL DEFAULT 'open'");
         }
@@ -27,6 +30,8 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             DB::statement("ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_status_check");
             DB::statement("ALTER TABLE tickets ADD CONSTRAINT tickets_status_check CHECK (status IN ('open', 'in_progress', 'resolved', 'closed'))");
+        } elseif ($driver === 'sqlite') {
+            // SQLite doesn't support MODIFY COLUMN; skip
         } else {
             DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('open','in_progress','resolved','closed') NOT NULL DEFAULT 'open'");
         }

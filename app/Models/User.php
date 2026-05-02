@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,6 +48,11 @@ class User extends Authenticatable
     public function knowledgeBases(): HasMany
     {
         return $this->hasMany(KnowledgeBase::class, 'author_id');
+    }
+
+    public function ticketTemplates(): HasMany
+    {
+        return $this->hasMany(TicketTemplate::class, 'created_by');
     }
 
     public function isAdmin(): bool

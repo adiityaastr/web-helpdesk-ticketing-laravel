@@ -1,8 +1,9 @@
-*.log
+# OS
 .DS_Store
 Thumbs.db
 Desktop.ini
 
+# Environment
 .env
 .env.backup
 .env.production
@@ -10,19 +11,25 @@ Desktop.ini
 .env.local
 .env.*.local
 
-.phpactor.json
-.phpunit.result.cache
-/.phpunit.cache
-
+# Dependencies
 /node_modules
+/vendor
+
+# Build
 /public/build
 /public/hot
 /public/storage
-/vendor
 
+# Database
+*.sqlite
+*.sqlite3
+/database/database.sqlite
+
+# Storage
 /storage/*.key
 /storage/pail
 
+# IDE
 /.codex
 /.cursor/
 /.idea
@@ -30,13 +37,20 @@ Desktop.ini
 /.vscode
 /.zed
 
-/auth.json
+# Tooling
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+auth.json
 _ide_helper.php
 _ide_helper_models.php
 Homestead.json
 Homestead.yaml
-
 composer.phar
 composer-setup.php
-*.sqlite
-*.sqlite3
+
+# Logs
+*.log
+
+# Docker (override lokal)
+docker-compose.override.yml

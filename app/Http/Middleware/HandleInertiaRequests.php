@@ -28,7 +28,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'department' => $user->department,
-                    'roles' => $user->roles->pluck('name')->values(),
+                    'roles' => $user->roles->pluck('name')->values()->all(),
                     'is_admin' => $user->isAdmin(),
                     'is_staff' => $user->isStaff(),
                     'is_customer' => $user->isCustomer(),

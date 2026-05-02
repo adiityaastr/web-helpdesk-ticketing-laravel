@@ -10,7 +10,7 @@ type NavItem = {
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
     const user = usePage<{ auth: { user: { name: string; email: string } }; notifications: { unread_count: number } }>().props.auth.user;
-    const unreadCount = usePage().props.notifications.unread_count;
+    const unreadCount = (usePage().props.notifications as { unread_count?: number } | undefined)?.unread_count ?? 0;
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';

@@ -9,6 +9,7 @@ use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Notifications\TicketActivityNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,8 +31,9 @@ class TicketController extends Controller
             ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')))
             ->when($request->string('priority')->isNotEmpty(), fn ($query) => $query->where('priority', $request->string('priority')))
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->string('search')}%")
-                    ->orWhere('description', 'like', "%{$request->string('search')}%");
+                $search = addcslashes($request->string('search')->toString(), '%_');
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             }));
 
         $tickets = $ticketQuery
@@ -65,27 +67,13 @@ class TicketController extends Controller
             }
         }
 
-        $slaDeadline = null;
-        $prioritySla = [
-            'critical' => 2,
-            'high' => 8,
-            'medium' => 24,
-            'low' => 48,
-        ];
-
-        $priority = $request->input('priority');
-        if (isset($prioritySla[$priority])) {
-            $slaDeadline = now()->addHours($prioritySla[$priority]);
-        }
-
         $ticket = Ticket::query()->create([
             'user_id' => $request->user()->id,
             'category_id' => $request->integer('category_id'),
             'title' => $request->string('title'),
             'description' => $request->string('description'),
-            'priority' => $priority,
+            'priority' => $request->input('priority'),
             'status' => 'open',
-            'sla_deadline' => $slaDeadline,
         ]);
 
         $ticket->comments()->create([
@@ -190,6 +178,89 @@ class TicketController extends Controller
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket berhasil dibatalkan.');
     }
 
+    public function confirmResolution(Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+
+        if ($ticket->user_id !== auth()->id()) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Hanya pelapor yang dapat mengonfirmasi.']);
+        }
+
+        if ($ticket->status !== 'resolved') {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Tiket belum diselesaikan.']);
+        }
+
+        if ($ticket->resolved_confirmed_at) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Tiket sudah dikonfirmasi sebelumnya.']);
+        }
+
+        $ticket->update([
+            'resolved_confirmed_at' => now(),
+            'status' => 'closed',
+        ]);
+
+        $ticket->comments()->create([
+            'user_id' => auth()->id(),
+            'message' => 'Pelapor mengonfirmasi bahwa permasalahan sudah diperbaiki. Tiket ditutup.',
+            'is_internal' => false,
+        ]);
+
+        $ticket->activityLogs()->create([
+            'user_id' => auth()->id(),
+            'action' => 'confirmed',
+            'description' => 'Pelapor mengonfirmasi penyelesaian tiket.',
+        ]);
+
+        $this->notifyRelatedUsers($ticket, 'confirmed');
+
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Konfirmasi berhasil. Tiket telah ditutup.');
+    }
+
+    public function rejectResolution(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+
+        if ($ticket->user_id !== auth()->id()) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Hanya pelapor yang dapat memberikan tanggapan.']);
+        }
+
+        if ($ticket->status !== 'resolved') {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Tiket belum diselesaikan.']);
+        }
+
+        if ($ticket->resolved_confirmed_at) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Tiket sudah dikonfirmasi sebelumnya.']);
+        }
+
+        $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $ticket->update([
+            'status' => 'in_progress',
+            'resolved_at' => null,
+        ]);
+
+        $ticket->comments()->create([
+            'user_id' => auth()->id(),
+            'message' => 'Pelapor menyatakan permasalahan belum selesai. Alasan: ' . $request->string('reason'),
+            'is_internal' => false,
+        ]);
+
+        $ticket->activityLogs()->create([
+            'user_id' => auth()->id(),
+            'action' => 'rejected',
+            'description' => 'Pelapor menolak penyelesaian. Tiket dibuka kembali.',
+        ]);
+
+        $this->notifyRelatedUsers($ticket, 'reopened');
+
+        Cache::forget('admin_dashboard_stats');
+        Cache::forget('admin_dashboard_charts');
+
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket dibuka kembali. Admin akan meninjau ulang.');
+    }
+
     public function destroy(Ticket $ticket): RedirectResponse
     {
         $this->authorize('delete', $ticket);
@@ -212,6 +283,10 @@ class TicketController extends Controller
     public function comment(StoreCommentRequest $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('comment', $ticket);
+
+        if (in_array($ticket->status, ['closed', 'cancelled'])) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => 'Kolom komentar ditutup — tiket sudah selesai.']);
+        }
 
         $attachmentPaths = [];
 
@@ -239,8 +314,14 @@ class TicketController extends Controller
 
         $users = collect([$ticket->reporter, $ticket->assignee])
             ->filter()
-            ->unique('id')
-            ->values();
+            ->unique('id');
+
+        if ($action === 'created') {
+            $staffAdmins = User::role(['staff', 'admin'])->get();
+            $users = $users->merge($staffAdmins)->unique('id');
+        }
+
+        $users = $users->values();
 
         if ($users->isNotEmpty()) {
             Notification::send($users, new TicketActivityNotification($ticket, $comment, $action));

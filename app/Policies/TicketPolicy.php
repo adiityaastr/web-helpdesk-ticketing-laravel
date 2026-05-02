@@ -45,7 +45,7 @@ class TicketPolicy
             return true;
         }
 
-        return $ticket->user_id === $user->id && in_array($ticket->status, ['open', 'cancelled']);
+        return $ticket->user_id === $user->id && in_array($ticket->status, ['open', 'cancelled'], true);
     }
 
     public function comment(User $user, Ticket $ticket): bool

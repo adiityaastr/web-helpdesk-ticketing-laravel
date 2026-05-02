@@ -25,7 +25,6 @@ class SawService
     public function calculateScores(): array
     {
         $tickets = Ticket::query()
-            ->whereIn('status', ['open', 'in_progress'])
             ->with(['category', 'reporter'])
             ->get();
 

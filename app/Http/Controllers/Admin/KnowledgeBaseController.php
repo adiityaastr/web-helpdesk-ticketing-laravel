@@ -17,7 +17,7 @@ class KnowledgeBaseController extends Controller
     {
         $articles = KnowledgeBase::query()
             ->with(['category', 'author'])
-            ->when($request->string('search')->isNotEmpty(), fn ($q) => $q->where('title', 'like', "%{$request->string('search')}%"))
+            ->when($request->string('search')->isNotEmpty(), fn ($q) => $q->where('title', 'like', '%'.addcslashes($request->string('search')->toString(), '%_').'%'))
             ->latest()
             ->paginate(15)
             ->withQueryString();

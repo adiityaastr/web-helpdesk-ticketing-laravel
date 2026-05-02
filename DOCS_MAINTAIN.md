@@ -3,43 +3,63 @@
 ## Tech Stack
 
 | Layer | Teknologi |
-|-------|-----------|
+|---|---|
 | Backend | Laravel 13 (PHP 8.3+) |
 | Frontend | React 19 + Inertia.js 3 + Tailwind CSS 4 |
 | Build | Vite 8 |
-| Database | PostgreSQL (via Supabase) |
+| Database | MySQL 8 / PostgreSQL 16 / SQLite 3 |
 | Auth Web | Laravel Session + Spatie Permission |
 | Auth API | Laravel Sanctum (token-based) |
-| Cache | File (local) / Redis |
+| Cache | File (local) / Redis (Docker) |
 | Queue | Database |
 
 ---
 
-## Struktur Direktori Penting
+## Struktur Direktori
 
 ```
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   ├── Admin/          # Controller untuk staff/admin
-│   │   ├── Api/            # Controller untuk REST API
-│   │   ├── Portal/         # Controller untuk customer
+│   │   ├── Admin/              # Dashboard, Ticket, User, Category, KnowledgeBase, Template
+│   │   │   ├── DashboardController.php
+│   │   │   ├── TicketController.php
+│   │   │   ├── UserController.php
+│   │   │   ├── CategoryController.php
+│   │   │   ├── KnowledgeBaseController.php
+│   │   │   └── TemplateController.php
+│   │   ├── Api/                # REST API (Sanctum token)
+│   │   │   ├── AuthController.php
+│   │   │   └── TicketController.php
+│   │   ├── Portal/             # Customer-facing pages
+│   │   │   ├── DashboardController.php
+│   │   │   ├── TicketController.php
+│   │   │   └── KnowledgeBaseController.php
 │   │   ├── AuthController.php
 │   │   ├── NotificationController.php
-│   │   └── Controller.php  # Base controller
+│   │   └── Controller.php
 │   ├── Middleware/
-│   │   ├── HandleInertiaRequests.php  # Share data ke React (CACHED)
+│   │   ├── HandleInertiaRequests.php  # Shared Inertia props (auth, notifications, flash)
 │   │   └── ForceRequestUrl.php
-│   ├── Requests/           # Form validation
+│   ├── Requests/               # Form Request validation
+│   │   ├── StoreTicketRequest.php
+│   │   ├── StoreCommentRequest.php
+│   │   └── UpdateTicketRequest.php
 │   └── Resources/
-│       └── TicketResource.php  # Transformasi Ticket → JSON
+│       └── TicketResource.php   # Ticket → JSON transformation
 ├── Models/
-│   ├── User.php            # User + HasApiTokens + HasRoles
+│   ├── User.php
 │   ├── Ticket.php
-│   ├── SawConfiguration.php # Konfigurasi bobot SAW
-│   └── ...
+│   ├── Comment.php
+│   ├── Category.php
+│   ├── KnowledgeBase.php
+│   ├── ActivityLog.php
+│   ├── TicketTemplate.php
+│   └── SawConfiguration.php
+├── Policies/
+│   └── TicketPolicy.php
 ├── Services/
-│   └── SawService.php      # Algoritma SAW (core)
+│   └── SawService.php           # SAW priority scoring algorithm
 └── Notifications/
     └── TicketActivityNotification.php
 ```
@@ -48,108 +68,128 @@ app/
 
 ## Menjalankan Aplikasi
 
+### Docker (Production)
 ```bash
-# Development (menjalankan server + queue + vite + logs sekaligus)
-composer run dev
-
-# Atau jalankan terpisah:
-php artisan serve           # Server di port 8000
-php artisan queue:work      # Queue worker
-npm run dev                 # Vite dev server
-
-# Build production
-npm run build
-php artisan optimize        # Cache config, routes, events, views
-
-# Setelah deploy production
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+docker compose up -d --build     # Auto .env, migrate, seed
+docker compose --profile dev up -d vite  # Hot-reload (opsional)
 ```
+
+### Local Development
+```bash
+composer dev                     # server + queue + logs + vite
+# atau manual:
+php artisan serve                # :8000
+php artisan queue:listen         # Queue worker
+npm run dev                      # Vite HMR
+```
+
+### Build Production
+```bash
+npm run build
+php artisan optimize
+```
+
+---
+
+## Alur Tiket (Status Flow)
+
+```
+open → in_progress → resolved → (user confirm) → closed
+  ↓                    ↓ (user reject)
+cancelled          in_progress (reopen)
+```
+
+| Status | Arti | Komentar |
+|---|---|---|
+| `open` | Tiket baru dibuat user | Bisa (user + admin) |
+| `in_progress` | Sedang dikerjakan admin | Bisa |
+| `resolved` | Admin selesai, tunggu konfirmasi user | Bisa (diskusi) |
+| `closed` | User konfirmasi selesai | Dikunci |
+| `cancelled` | Dibatalkan user/admin | Dikunci |
+
+### Konfirmasi Ganda
+Saat admin set status `resolved`, user melihat panel konfirmasi:
+- **Ya, Sudah Selesai** → status `closed`, komentar: "Pelapor mengonfirmasi"
+- **Belum, Masih Ada Masalah** → isi alasan → status kembali `in_progress`
 
 ---
 
 ## SAW (Simple Additive Weighting)
 
 ### Cara Kerja
-1. Sistem menghitung skor prioritas untuk setiap tiket berstatus `open`/`in_progress`
-2. 5 kriteria digunakan: Prioritas, Urgensi SLA, Waktu Tunggu, Aktivitas Pelanggan, Kompleksitas
-3. Admin dapat menyesuaikan bobot di halaman `/admin/saw`
-4. Skor dihitung dengan rumus: `Vi = Σ (wj × rij)`
-
-### Reset ke Default
-- Klik tombol "Simpan Bobot" di halaman SAW, atau
-- Jalankan endpoint `POST /admin/saw/seed` (pakai form kosong)
+1. Skor prioritas dihitung untuk **semua tiket** dan ditampilkan di kolom SAW pada `/admin/tickets`
+2. 5 kriteria: C1 (Prioritas), C2 (Urgensi SLA), C3 (Waktu Tunggu), C4 (Aktivitas Pelanggan), C5 (Kompleksitas)
+3. Konfigurasi bobot disimpan di tabel `saw_configurations`
+4. Seed default via: `(new SawService())->seedDefaults()`
 
 ### Menambah Kriteria Baru
-1. Tambah row di tabel `saw_configurations` via migration atau seeder
-2. Tambah case di method `getCriterionValue()` di `app/Services/SawService.php`
-3. Restart server
+1. Tambah row di `saw_configurations` via migration/seeder
+2. Tambah case di `getCriterionValue()` di `SawService.php`
+3. Update `seedDefaults()` jika perlu
 
 ---
 
-## API Routes
-
-Semua route API ada di `routes/api.php` dengan prefix `/api/v1`.
-
-Untuk menambah endpoint baru:
-1. Buat controller di `app/Http/Controllers/Api/`
-2. Tambah route di `routes/api.php`
-3. Gunakan middleware `auth:sanctum` untuk endpoint yang butuh autentikasi
-
----
-
-## Performance Optimizations (Fase 1)
-
-### Apa yang Sudah Dioptimasi
-
-| # | Optimasi | Lokasi |
-|---|----------|--------|
-| 1 | Cache user auth & notifikasi | `HandleInertiaRequests.php` — 30 detik cache |
-| 2 | Query dashboard digabung pakai FILTER | `Admin/DashboardController.php` — 10 query → 3 query |
-| 3 | Cache dashboard stats | `Admin/DashboardController.php` — 60 detik cache |
-| 4 | Session & cache pakai file (local) | `.env` — `CACHE_STORE=file`, `SESSION_DRIVER=file` |
-| 5 | Code splitting frontend | `app.js` — lazy load halaman |
-| 6 | Google Fonts non-blocking | `app.blade.php` — `media="print" onload` |
-| 7 | APP_DEBUG=false | `.env` — production mode |
-| 8 | Config/route/view caching | `php artisan optimize` |
-
-### Clear Cache Saat Development
-```bash
-php artisan optimize:clear    # Hapus semua cache
-php artisan cache:clear       # Hapus cache data saja
-```
-
----
-
-## Tips Pengembangan
-
-### N+1 Query Prevention
+## N+1 Query Prevention
 - Selalu gunakan `->with(['relation1', 'relation2'])` saat query
-- Cek `TicketResource.php` — field yang dipakai di resource harus di-eager-load
-- Gunakan Laravel Debugbar untuk development (opsional)
+- Cek `TicketResource.php` — field yang dipakai harus di-eager-load
+- `HandleInertiaRequests.php` — auth user di-cache 300 detik
 
-### Menambah Role Baru
-1. Jalankan: `php artisan permission:create-role nama_role`
-2. Assign ke user: `$user->assignRole('nama_role')`
-3. Update route middleware: `role:staff|admin|nama_role`
+---
 
-### Menambah Halaman Baru (Inertia)
-1. Buat file `.tsx` di `resources/js/Pages/Admin/` atau `Portal/`
-2. Buat controller method yang return `Inertia::render('Admin/NamaPage', [...])`
+## Menambah Role Baru
+```bash
+php artisan permission:create-role nama_role
+```
+```php
+$user->assignRole('nama_role');
+```
+Update middleware: `role:staff|admin|nama_role`
+
+---
+
+## Menambah Halaman Baru (Inertia)
+1. Buat `.tsx` di `resources/js/Pages/Admin/` atau `Portal/`
+2. Buat controller method → `Inertia::render('Admin/NamaPage', [...])`
 3. Tambah route di `routes/web.php`
 4. Nama page = path relatif dari `Pages/` tanpa `.tsx`
 
 ---
 
-## Backlog Fase 2
+## Cache
+
+| Command | Fungsi |
+|---|---|
+| `php artisan optimize:clear` | Hapus semua cache |
+| `php artisan cache:clear` | Hapus cache data |
+| `php artisan config:cache` | Cache config (production) |
+| `php artisan route:cache` | Cache routes (production) |
+| `php artisan view:cache` | Cache views (production) |
+
+---
+
+## API Routes
+
+Prefix: `/api/v1`. Semua route di `routes/api.php`.
+
+| Method | Endpoint | Auth |
+|---|---|---|
+| POST | `/register` | Guest |
+| POST | `/login` | Guest |
+| POST | `/logout` | Bearer |
+| GET | `/user` | Bearer |
+| GET | `/tickets` | Bearer |
+| POST | `/tickets` | Bearer |
+| GET | `/tickets/{id}` | Bearer |
+| POST | `/tickets/{id}/comments` | Bearer |
+
+---
+
+## Backlog
 
 | Fitur | Deskripsi |
-|-------|-----------|
-| Notifikasi Email | Kirim email saat tiket diupdate (gunakan Mail facade Laravel) |
-| Export Excel | Export tiket ke Excel (gunakan `maatwebsite/excel`) |
-| Riwayat Tiket Customer | Sidebar riwayat tiket customer di halaman detail tiket |
-| Reopen Tiket | Customer bisa buka kembali tiket resolved/closed |
+|---|---|
+| Notifikasi Email | Kirim email saat tiket diupdate |
+| Export Excel | Export tiket ke Excel |
 | Preview Lampiran | Pratinjau gambar/PDF di modal |
-| Dark Mode | Toggle dark/light dengan Tailwind `dark:` class |
-| Search Knowledge Base | Full-text search di halaman knowledge base |
+| Dark Mode | Toggle dark/light |
+| Search Knowledge Base | Full-text search |

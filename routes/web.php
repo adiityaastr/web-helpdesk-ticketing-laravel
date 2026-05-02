@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\KnowledgeBaseController as AdminKnowledgeBaseController;
-use App\Http\Controllers\Admin\SawController;
 use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
@@ -14,7 +13,15 @@ use App\Http\Controllers\Portal\KnowledgeBaseController as PortalKnowledgeBaseCo
 use App\Http\Controllers\Portal\TicketController as PortalTicketController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('login'));
+Route::get('/', function () {
+    if (auth()->check()) {
+        if (auth()->user()->hasAnyRole(['staff', 'admin'])) {
+            return redirect()->route('admin.dashboard');
+        }
+        return redirect()->route('portal.dashboard');
+    }
+    return redirect()->route('login');
+});
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
@@ -40,6 +47,8 @@ Route::middleware('auth')->prefix('portal')->name('portal.')->group(function ():
         Route::post('/tickets/{ticket}/comments', [PortalTicketController::class, 'comment'])->name('tickets.comment');
         Route::post('/tickets/{ticket}/rate', [PortalTicketController::class, 'rate'])->name('tickets.rate');
         Route::post('/tickets/{ticket}/cancel', [PortalTicketController::class, 'cancel'])->name('tickets.cancel');
+        Route::post('/tickets/{ticket}/confirm', [PortalTicketController::class, 'confirmResolution'])->name('tickets.confirm');
+        Route::post('/tickets/{ticket}/reject', [PortalTicketController::class, 'rejectResolution'])->name('tickets.reject');
         Route::delete('/tickets/{ticket}', [PortalTicketController::class, 'destroy'])->name('tickets.destroy');
     });
 });
@@ -55,9 +64,6 @@ Route::middleware(['auth', 'role:staff|admin'])->prefix('admin')->name('admin.')
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('knowledge-base', AdminKnowledgeBaseController::class)->except(['create', 'edit', 'show']);
     Route::resource('templates', TemplateController::class)->except(['create', 'edit', 'show']);
-    Route::get('/saw', [SawController::class, 'index'])->name('saw.index');
-    Route::post('/saw/weights', [SawController::class, 'updateWeights'])->name('saw.update-weights');
-    Route::post('/saw/seed', [SawController::class, 'seed'])->name('saw.seed');
 });
 
 Route::middleware('auth')->group(function (): void {

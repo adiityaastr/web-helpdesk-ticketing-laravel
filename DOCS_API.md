@@ -64,9 +64,7 @@ Authorization: Bearer {token}
 
 Response `200`:
 ```json
-{
-    "message": "Logged out."
-}
+{ "message": "Logged out." }
 ```
 
 ### Get Current User
@@ -101,8 +99,9 @@ Authorization: Bearer {token}
 ```
 
 Query Parameters:
+
 | Param | Type | Description |
-|-------|------|-------------|
+|---|---|---|
 | status | string | Filter: open, in_progress, resolved, closed, cancelled |
 | priority | string | Filter: low, medium, high, critical |
 | search | string | Search title & description |
@@ -118,12 +117,20 @@ Response `200`:
             "description": "Detail masalah...",
             "priority": "high",
             "status": "open",
-            "sla_deadline": "2026-05-01 10:00:00",
+            "sla_deadline": null,
+            "resolved_at": null,
+            "resolved_confirmed_at": null,
+            "cancelled_at": null,
+            "rating": null,
+            "rating_comment": null,
             "created_at": "2026-04-30 12:00:00",
+            "is_overdue": false,
+            "is_sla_warning": false,
+            "is_cancellable": true,
+            "is_deletable": true,
             "category": { "id": 1, "name": "Jaringan" },
             "reporter": { "id": 1, "name": "User A", "department": "IT" },
-            "assignee": null,
-            "is_overdue": false
+            "assignee": null
         }
     ],
     "meta": {
@@ -178,6 +185,8 @@ message: "Komentar saya"
 attachments[]: (file, optional)
 ```
 
+> Komentar ditolak (422) jika tiket berstatus `closed` atau `cancelled`.
+
 Response `200`:
 ```json
 {
@@ -190,18 +199,20 @@ Response `200`:
 
 ## Error Responses
 
+| Status | Meaning |
+|---|---|
+| `401` | Token tidak valid / expired |
+| `403` | Tidak punya akses ke tiket |
+| `422` | Validasi gagal / komentar dikunci |
+
 ### 401 Unauthorized
 ```json
-{
-    "message": "Unauthenticated."
-}
+{ "message": "Unauthenticated." }
 ```
 
 ### 403 Forbidden
 ```json
-{
-    "message": "Unauthorized."
-}
+{ "message": "Unauthorized." }
 ```
 
 ### 422 Validation Error
@@ -218,6 +229,6 @@ Response `200`:
 
 ## Token Management
 
-- Token tidak expired (default `null` = never)
-- Untuk mengatur expiry: edit `config/sanctum.php` → `'expiration' => 1440` (24 jam dalam menit)
+- Token tidak expired secara default
+- Untuk mengatur expiry: edit `config/sanctum.php` → `'expiration' => 1440` (menit)
 - Prefix token: set `SANCTUM_TOKEN_PREFIX` di `.env`

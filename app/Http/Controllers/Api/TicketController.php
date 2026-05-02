@@ -22,8 +22,9 @@ class TicketController extends Controller
             ->when($request->string('status')->isNotEmpty(), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->string('priority')->isNotEmpty(), fn ($q) => $q->where('priority', $request->string('priority')))
             ->when($request->string('search')->isNotEmpty(), fn ($q) => $q->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->string('search')}%")
-                    ->orWhere('description', 'like', "%{$request->string('search')}%");
+                $search = addcslashes($request->string('search')->toString(), '%_');
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             }))
             ->latest()
             ->paginate(10);
@@ -56,27 +57,13 @@ class TicketController extends Controller
             }
         }
 
-        $slaDeadline = null;
-        $prioritySla = [
-            'critical' => 2,
-            'high' => 8,
-            'medium' => 24,
-            'low' => 48,
-        ];
-
-        $priority = $request->input('priority');
-        if (isset($prioritySla[$priority])) {
-            $slaDeadline = now()->addHours($prioritySla[$priority]);
-        }
-
         $ticket = Ticket::query()->create([
             'user_id' => $request->user()->id,
             'category_id' => $request->integer('category_id'),
             'title' => $request->string('title'),
             'description' => $request->string('description'),
-            'priority' => $priority,
+            'priority' => $request->input('priority'),
             'status' => 'open',
-            'sla_deadline' => $slaDeadline,
         ]);
 
         $ticket->comments()->create([
@@ -111,6 +98,10 @@ class TicketController extends Controller
     {
         if ($ticket->user_id !== auth()->id() && ! auth()->user()->isStaffOrAdmin()) {
             return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        if (in_array($ticket->status, ['resolved', 'closed'])) {
+            return response()->json(['message' => 'Kolom komentar ditutup — tiket sudah selesai.'], 422);
         }
 
         $request->validate([

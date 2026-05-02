@@ -12,7 +12,7 @@ class KnowledgeBaseController extends Controller
     public function index(): Response
     {
         $articles = KnowledgeBase::query()
-            ->where('is_published', \Illuminate\Support\Facades\DB::raw('true'))
+            ->where('is_published', true)
             ->with('category')
             ->latest()
             ->paginate(12);

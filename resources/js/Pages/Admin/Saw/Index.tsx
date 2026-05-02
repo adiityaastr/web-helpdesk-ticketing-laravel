@@ -1,4 +1,4 @@
-import { Link, useForm, usePage } from '@inertiajs/react';
+import { Link, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import AdminLayout from '../Layout';
 
@@ -62,19 +62,16 @@ export default function SawIndex({ criteria, ranking, totalWeight }: Props) {
         return w;
     });
 
-    const { put } = useForm();
+    const { put, setData, processing: saving } = useForm({ weights: {} as Record<string, number> });
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
 
-    const handleWeightChange = (code: string, value: number) => {
-        setWeights((prev) => ({ ...prev, [code]: value }));
+    const handleSave = () => {
+        setData('weights', weights);
+        put('/admin/saw/weights', { preserveScroll: true });
     };
 
     const currentTotal = Object.values(weights).reduce((sum, w) => sum + w, 0);
     const isValid = Math.abs(currentTotal - 1.0) < 0.001;
-
-    const handleSave = () => {
-        put('/admin/saw/weights', { preserveScroll: true });
-    };
 
     return (
         <AdminLayout>
@@ -127,7 +124,7 @@ export default function SawIndex({ criteria, ranking, totalWeight }: Props) {
                         {!isValid && <span className="ml-2 text-xs text-rose-500">(harus = 1.00)</span>}
                     </div>
                     <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-                        <button type="submit" disabled={!isValid} className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition ${isValid ? 'bg-teal-600 hover:bg-teal-700' : 'cursor-not-allowed bg-slate-300'}`}>
+                        <button type="submit" disabled={!isValid || saving} className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition ${isValid && !saving ? 'bg-teal-600 hover:bg-teal-700' : 'cursor-not-allowed bg-slate-300'}`}>
                             Simpan Bobot
                         </button>
                     </form>
@@ -184,6 +181,22 @@ export default function SawIndex({ criteria, ranking, totalWeight }: Props) {
                 <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
                     <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>analytics</span>
                     <p className="mt-2 text-sm text-slate-400">Tidak ada tiket berstatus open/in_progress untuk dianalisis.</p>
+                </div>
+            )}
+
+            {criteria.length === 0 && (
+                <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
+                    <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>tune</span>
+                    <p className="mt-2 text-sm font-medium text-slate-700">Belum ada konfigurasi kriteria SAW</p>
+                    <p className="mt-1 text-xs text-slate-400">Klik tombol di bawah untuk menginisialisasi data kriteria default.</p>
+                    <button
+                        type="button"
+                        onClick={() => { router.post('/admin/saw/seed', {}, { preserveScroll: true }); }}
+                        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                    >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>rocket_launch</span>
+                        Inisialisasi Kriteria SAW
+                    </button>
                 </div>
             )}
         </AdminLayout>

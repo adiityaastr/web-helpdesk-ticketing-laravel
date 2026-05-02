@@ -1,0 +1,55 @@
+{
+  "name": "VS Code Pets",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1f2937",
+    "editor.foreground": "#e5e7eb",
+    "editorCursor.foreground": "#facc15",
+    "editor.lineHighlightBackground": "#374151",
+    "editor.selectionBackground": "#4b5563",
+    "editor.inactiveSelectionBackground": "#374151",
+    "editorWhitespace.foreground": "#6b7280",
+    "editorIndentGuide.background": "#374151",
+    "activityBar.background": "#111827",
+    "sideBar.background": "#111827",
+    "statusBar.background": "#111827",
+    "titleBar.activeBackground": "#111827",
+    "button.background": "#2563eb",
+    "button.foreground": "#f9fafb"
+  },
+  "tokenColors": [
+    {
+      "scope": ["comment", "punctuation.definition.comment"],
+      "settings": {
+        "foreground": "#9ca3af",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": ["string", "constant.other.symbol"],
+      "settings": {
+        "foreground": "#f59e0b"
+      }
+    },
+    {
+      "scope": ["keyword", "storage.type"],
+      "settings": {
+        "foreground": "#38bdf8",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": ["variable", "variable.parameter"],
+      "settings": {
+        "foreground": "#a78bfa"
+      }
+    },
+    {
+      "scope": ["constant.numeric", "constant.language"],
+      "settings": {
+        "foreground": "#34d399"
+      }
+    }
+  ],
+  "semanticHighlighting": true
+}

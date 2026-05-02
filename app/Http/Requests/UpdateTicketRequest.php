@@ -23,7 +23,7 @@ class UpdateTicketRequest extends FormRequest
     {
         return [
             'priority' => ['required', Rule::in(['low', 'medium', 'high', 'critical'])],
-            'status' => ['required', Rule::in(['open', 'in_progress', 'resolved', 'closed', 'cancelled'])],
+            'status' => ['required', Rule::in(['in_progress', 'resolved', 'closed', 'cancelled'])],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
         ];
     }

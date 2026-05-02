@@ -48,6 +48,7 @@ const statusColors: Record<string, string> = {
     in_progress: '#f59e0b',
     resolved: '#10b981',
     closed: '#64748b',
+    cancelled: '#f43f5e',
 };
 
 const priorityColors: Record<string, string> = {
@@ -57,7 +58,7 @@ const priorityColors: Record<string, string> = {
     low: '#22c55e',
 };
 
-const statusLabel: Record<string, string> = { open: 'Menunggu', in_progress: 'Diproses', resolved: 'Selesai', closed: 'Ditutup' };
+const statusLabel: Record<string, string> = { open: 'Menunggu', in_progress: 'Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
 const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
 
 const statusBadge = (status: string) => {

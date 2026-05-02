@@ -1,5 +1,4 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { useMemo } from 'react';
 import AdminLayout from '../Layout';
 
 type TicketItem = {
@@ -21,8 +20,8 @@ type StaffOption = { id: number; name: string };
 
 type Props = {
     tickets: { data: TicketItem[] };
-    filters: { status?: string; priority?: string; category_id?: string; assigned_to?: string; search?: string; sort?: string };
-    statuses: string[];
+            filters: { status?: string; priority?: string; category_id?: string; assigned_to?: string; search?: string };
+            statuses: string[];
     priorities: string[];
     categories: CategoryOption[];
     staffUsers: StaffOption[];
@@ -47,13 +46,6 @@ export default function AdminTicketIndex({ tickets, filters, statuses, prioritie
     const updateFilter = (key: string, value: string) => {
         router.get('/admin/tickets', { ...filters, [key]: value || undefined }, { preserveState: true });
     };
-
-    const sortedTickets = useMemo(() => {
-        if (filters.sort === 'saw_score') {
-            return [...tickets.data].sort((a, b) => (b.saw_score ?? 0) - (a.saw_score ?? 0));
-        }
-        return tickets.data;
-    }, [tickets.data, filters.sort]);
 
     return (
         <AdminLayout>
@@ -98,10 +90,6 @@ export default function AdminTicketIndex({ tickets, filters, statuses, prioritie
                     <option value="">Semua Petugas</option>
                     {staffUsers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
-                <select className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={filters.sort ?? ''} onChange={(e) => updateFilter('sort', e.target.value)}>
-                    <option value="">Urut: Terbaru</option>
-                    <option value="saw_score">Urut: Skor SAW</option>
-                </select>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -123,7 +111,7 @@ export default function AdminTicketIndex({ tickets, filters, statuses, prioritie
                             {tickets.data.length === 0 && (
                                 <tr><td className="px-5 py-8 text-center text-slate-400" colSpan={8}>Tidak ada tiket.</td></tr>
                             )}
-                            {(filters.sort === 'saw_score' ? sortedTickets : tickets.data).map((ticket) => (
+                            {tickets.data.map((ticket) => (
                                 <tr key={ticket.id} className="border-b border-slate-100 last:border-0">
                                     <td className="px-5 py-3">
                                         <div className="flex items-center gap-2">

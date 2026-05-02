@@ -18,6 +18,7 @@ class TicketResource extends JsonResource
             'status' => $this->status,
             'sla_deadline' => $this->sla_deadline?->toDateTimeString(),
             'resolved_at' => $this->resolved_at?->toDateTimeString(),
+            'resolved_confirmed_at' => $this->resolved_confirmed_at?->toDateTimeString(),
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),
             'rating' => $this->rating,
             'rating_comment' => $this->rating_comment,

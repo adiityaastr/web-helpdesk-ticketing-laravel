@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState, useCallback } from 'react';
+import { FormEvent, useRef, useState, useCallback, useEffect } from 'react';
 import { Link, useForm } from '@inertiajs/react';
 import PortalLayout from '../Layout';
 
@@ -72,9 +72,14 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
     };
 
     const switchCamera = () => {
-        stopCamera();
         setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
     };
+
+    useEffect(() => {
+        if (cameraOpen) {
+            startCamera();
+        }
+    }, [facingMode, cameraOpen, startCamera]);
 
     const capturePhoto = () => {
         if (!videoRef.current || !canvasRef.current) return;

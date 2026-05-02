@@ -44,7 +44,7 @@ export default function PortalDashboard({ recentTickets, stats }: Props) {
             )}
 
             <section className="mb-8">
-                <h2 className="text-2xl font-bold text-slate-900">Halo, {usePage<{ auth: { user: { name: string } } }>().props.auth.user.name.split(' ')[0]}</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Halo, {usePage<{ auth: { user: { name: string } } }>().props.auth?.user?.name?.split(' ')[0] ?? 'Pengguna'}</h2>
                 <p className="mt-1 text-sm text-slate-500">Selamat datang kembali di pusat bantuan teknis.</p>
             </section>
 

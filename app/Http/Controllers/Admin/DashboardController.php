@@ -17,11 +17,11 @@ class DashboardController extends Controller
             $row = Ticket::query()
                 ->selectRaw("
                     COUNT(*) as total,
-                    COUNT(*) FILTER (WHERE status = 'open') as open,
-                    COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress,
-                    COUNT(*) FILTER (WHERE status = 'resolved') as resolved,
-                    COUNT(*) FILTER (WHERE status = 'closed') as closed,
-                    COUNT(*) FILTER (WHERE status NOT IN ('resolved', 'closed') AND sla_deadline IS NOT NULL AND sla_deadline < NOW()) as overdue
+                    COUNT(CASE WHEN status = 'open' THEN 1 END) as open,
+                    COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+                    COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved,
+                    COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed,
+                    COUNT(CASE WHEN status NOT IN ('resolved', 'closed', 'cancelled') AND sla_deadline IS NOT NULL AND sla_deadline < NOW() THEN 1 END) as overdue
                 ")
                 ->first();
 
@@ -48,12 +48,12 @@ class DashboardController extends Controller
 
             return [
                 'priorityChart' => [
-                    'labels' => $priorityChart->keys()->values(),
-                    'values' => $priorityChart->values(),
+                    'labels' => $priorityChart->keys()->values()->all(),
+                    'values' => $priorityChart->values()->all(),
                 ],
                 'statusChart' => [
-                    'labels' => $statusChart->keys()->values(),
-                    'values' => $statusChart->values(),
+                    'labels' => $statusChart->keys()->values()->all(),
+                    'values' => $statusChart->values()->all(),
                 ],
             ];
         });

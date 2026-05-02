@@ -20,6 +20,7 @@ class Ticket extends Model
         'assigned_to',
         'sla_deadline',
         'resolved_at',
+        'resolved_confirmed_at',
         'cancelled_at',
         'rating',
         'rating_comment',
@@ -30,7 +31,9 @@ class Ticket extends Model
         return [
             'sla_deadline' => 'datetime',
             'resolved_at' => 'datetime',
+            'resolved_confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'rating' => 'integer',
         ];
     }
 

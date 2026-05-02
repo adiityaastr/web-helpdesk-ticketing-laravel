@@ -16,6 +16,7 @@ use App\Services\SawService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -32,8 +33,9 @@ class TicketController extends Controller
             ->when($request->string('category_id')->isNotEmpty(), fn ($query) => $query->where('category_id', $request->string('category_id')))
             ->when($request->string('assigned_to')->isNotEmpty(), fn ($query) => $query->where('assigned_to', $request->string('assigned_to')))
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->string('search')}%")
-                    ->orWhere('description', 'like', "%{$request->string('search')}%");
+                $search = addcslashes($request->string('search')->toString(), '%_');
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             }));
 
         $tickets = $ticketQuery
@@ -42,29 +44,25 @@ class TicketController extends Controller
             ->withQueryString();
 
         $sawScores = [];
-        if ($request->string('sort')->toString() === 'saw_score') {
-            try {
-                $saw = new SawService();
-                $sawScores = $saw->calculateScores();
-            } catch (\Exception) {
-                $sawScores = [];
-            }
+        try {
+            $saw = new SawService();
+            $sawScores = $saw->calculateScores();
+        } catch (\Exception $e) {
+            Log::error('SAW calculation failed: '.$e->getMessage(), ['exception' => $e]);
         }
 
         $ticketData = TicketResource::collection($tickets)->resolve();
 
-        if (! empty($sawScores)) {
-            foreach ($ticketData as &$t) {
-                $t['saw_score'] = $sawScores[$t['id']] ?? null;
-            }
+        foreach ($ticketData as &$t) {
+            $t['saw_score'] = $sawScores[$t['id']] ?? null;
         }
 
         return Inertia::render('Admin/Tickets/Index', [
             'tickets' => [
                 'data' => $ticketData,
             ],
-            'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search', 'sort']),
-            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
+            'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search']),
+            'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
             'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
@@ -106,7 +104,7 @@ class TicketController extends Controller
             'activityLogs' => $activityLogs,
             'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
             'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
-            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
+            'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
             'templates' => TicketTemplate::query()->select('id', 'title', 'content')->orderBy('title')->get(),
         ]);
@@ -131,7 +129,7 @@ class TicketController extends Controller
             $payload['resolved_at'] = null;
         }
 
-        if ($payload['status'] === 'open' || $payload['status'] === 'in_progress') {
+        if ($payload['status'] === 'in_progress') {
             if ($oldStatus === 'resolved') {
                 $payload['resolved_at'] = null;
             }
@@ -186,6 +184,10 @@ class TicketController extends Controller
     public function comment(StoreCommentRequest $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('comment', $ticket);
+
+        if (in_array($ticket->status, ['closed', 'cancelled'])) {
+            return redirect()->route('admin.tickets.show', $ticket)->withErrors(['error' => 'Kolom komentar ditutup — tiket sudah selesai.']);
+        }
 
         $attachmentPaths = [];
 

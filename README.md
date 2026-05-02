@@ -12,34 +12,104 @@ Aplikasi helpdesk ticketing berbasis web untuk mengelola tiket bantuan teknis, d
 | Composer | ^2.0 |
 | Node.js | ^18.0 |
 | NPM | ^9.0 |
-| MySQL | ^8.0 / MariaDB ^10.6 |
-| Ekstensi PHP | pdo_mysql, mbstring, xml, bcmath, curl, zip |
+| Database | MySQL ^8.0 / PostgreSQL ^16 / SQLite 3 |
+| Ekstensi PHP | pdo_mysql / pdo_pgsql / pdo_sqlite, mbstring, xml, bcmath, curl, zip |
+
+> **Catatan:** Aplikasi support 3 driver database — MySQL, PostgreSQL, dan SQLite. Migrasi otomatis menyesuaikan perbedaan sintaks antar driver.
 
 ---
 
-## Setup Instalasi Lengkap
+## Setup Instalasi
 
-### 1. Clone Repository
+### A. Docker (Direkomendasikan — Production Ready)
 
 ```bash
 git clone <repository-url> ticketing-app
 cd ticketing-app
+docker compose up -d --build
 ```
 
-### 2. Install Dependensi PHP
+**Selesai.** Entrypoint otomatis akan:
+- Copy `.env.example` → `.env`
+- Install dependensi PHP (`composer install`)
+- Generate `APP_KEY`
+- Buat storage symlink
+- Tunggu database siap → jalankan `migrate` + `db:seed`
+
+Buka browser di **`http://localhost:8000`**
+
+| Service | Port | Keterangan |
+|---|---|---|
+| Nginx | `8000` → `80` | Reverse proxy + static assets |
+| PHP-FPM 8.3 | internal | Application server |
+| MySQL 8.0 | `3306` | Database (volume persistent) |
+| Redis 7 | `6379` | Cache & session driver |
+| Queue Worker | internal | Proses notifikasi async |
+
+#### Hot-Reload (Development)
 
 ```bash
+docker compose --profile dev up -d vite
+```
+
+Vite dev server di `http://localhost:5173` — file `public/hot` otomatis dibuat, CSS/JS dimuat via HMR.
+
+Jika tidak pakai Vite, build frontend manual:
+
+```bash
+npm install && npm run build
+# Hapus public/hot jika ada agar aset build yg digunakan
+```
+
+#### Perintah dalam Container
+
+```bash
+docker compose exec app php artisan migrate          # Migrasi manual
+docker compose exec app php artisan db:seed           # Seed manual
+docker compose exec app php artisan migrate:fresh --seed  # Reset DB
+docker compose exec app php artisan optimize:clear    # Clear cache
+docker compose exec app php artisan storage:link      # Symlink storage
+docker compose logs app                               # Lihat log
+docker compose restart queue                          # Restart queue worker
+```
+
+#### Deploy ke Server
+
+```bash
+# 1. Clone & setup
+git clone <url> /opt/helpdesk && cd /opt/helpdesk
+
+# 2. Build aset frontend di host (sebelum Docker build)
+npm install && npm run build
+
+# 3. Jalankan
+docker compose up -d --build
+
+# 4. (Opsional) Setup cron untuk scheduler Laravel
+echo "* * * * * docker compose -f /opt/helpdesk/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1" | crontab -
+```
+
+---
+
+### B. Instalasi Manual (Local Dev)
+
+#### 1. Clone & Install
+
+```bash
+git clone <repository-url> ticketing-app
+cd ticketing-app
 composer install
-```
-
-### 3. Konfigurasi Environment
-
-```bash
 cp .env.example .env
 php artisan key:generate
+npm install && npm run build
 ```
 
-Edit file `.env` dan sesuaikan konfigurasi database:
+#### 2. Konfigurasi Database
+
+Edit `.env` — pilih salah satu:
+
+<details>
+<summary>MySQL / MariaDB</summary>
 
 ```env
 DB_CONNECTION=mysql
@@ -50,13 +120,42 @@ DB_USERNAME=root
 DB_PASSWORD=your_password
 ```
 
-Buat database MySQL:
-
 ```sql
 CREATE DATABASE helpdesk_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
+</details>
 
-### 4. Jalankan Migrasi & Seeder
+<details>
+<summary>PostgreSQL</summary>
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=helpdesk
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+```
+
+```sql
+CREATE DATABASE helpdesk;
+```
+</details>
+
+<details>
+<summary>SQLite (zero-config, cocok untuk dev)</summary>
+
+```env
+DB_CONNECTION=sqlite
+# DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD tidak diperlukan
+```
+
+```bash
+php -r "touch('database/database.sqlite');"
+```
+</details>
+
+#### 3. Migrasi, Seed, Storage
 
 ```bash
 php artisan migrate
@@ -68,7 +167,7 @@ Perintah ini akan membuat seluruh tabel dan mengisi data awal:
 - **3 role** (admin, staff, customer) beserta permission-nya
 - **5 kategori** tiket (Hardware, Software, Jaringan, Akses Akun, Lainnya)
 
-### 5. Storage Link
+#### 5. Storage Link
 
 ```bash
 php artisan storage:link
@@ -76,14 +175,14 @@ php artisan storage:link
 
 Diperlukan agar file lampiran (foto, PDF) yang diupload bisa diakses melalui URL.
 
-### 6. Install Dependensi Frontend & Build
+#### 6. Install Dependensi Frontend & Build
 
 ```bash
 npm install
 npm run build
 ```
 
-### 7. Jalankan Aplikasi
+#### 7. Jalankan Aplikasi
 
 **Untuk development** (direkomendasikan):
 
@@ -133,7 +232,8 @@ Setelah `db:seed`, 3 akun tersedia:
 | Charts | Chart.js + react-chartjs-2 |
 | Build Tool | Vite 8 |
 | Permissions | spatie/laravel-permission |
-| Database | MySQL 8 |
+| Database | MySQL 8 / PostgreSQL 16 / SQLite 3 |
+| Prioritas | SAW (Simple Additive Weighting) |
 
 ### Alur Data
 
@@ -335,11 +435,30 @@ chmod -R 775 bootstrap/cache
 
 File lampiran tiket disimpan di `storage/app/public/tickets/` dan diakses via `http://domain/storage/tickets/...`.
 
+### SAW — Prioritas Otomatis
+
+Skor SAW (Simple Additive Weighting) dihitung otomatis dan ditampilkan di kolom **SAW** pada halaman `/admin/tickets`. Skor membantu menentukan prioritas pengerjaan tiket berdasarkan 5 kriteria (C1-C5).
+
+### Konfigurasi SLA
+
+Mapping prioritas ke deadline SLA dapat dikonfigurasi di `config/sla.php`:
+
+```php
+'priorities' => [
+    'critical' => 2,  // 2 jam
+    'high' => 8,      // 8 jam
+    'medium' => 24,   // 24 jam
+    'low' => 48,      // 48 jam
+],
+```
+
 ---
 
 ## Perintah yang Berguna
 
 ```bash
+# === Lokal ===
+
 # Setup lengkap dari nol
 composer setup
 
@@ -363,6 +482,22 @@ php artisan storage:link
 
 # Jalankan queue worker
 php artisan queue:listen
+
+# === Docker ===
+
+# Jalankan semua service
+docker compose up -d
+
+# Masuk ke container app
+docker compose exec app bash
+
+# Jalankan perintah artisan dalam container
+docker compose exec app php artisan migrate --force
+docker compose exec app php artisan db:seed --force
+docker compose exec app php artisan storage:link
+
+# Restart service tertentu
+docker compose restart app nginx queue
 ```
 
 ---
@@ -371,11 +506,14 @@ php artisan queue:listen
 
 | Masalah | Solusi |
 |---|---|
-| Halaman putih / 500 error | `php artisan optimize:clear` lalu `npm run build` |
+| Halaman putih / blank hitam | Hapus `public/hot` lalu `npm run build` dan `php artisan optimize:clear` |
+| Halaman 500 error | `php artisan optimize:clear` lalu `npm run build` |
 | CSS tidak muncul | `npm run build` lalu `php artisan optimize:clear` |
+| Asset mengarah ke `localhost:5173` | Hapus file `public/hot` agar aplikasi menggunakan aset build |
 | Upload lampiran gagal | Pastikan `php artisan storage:link` sudah dijalankan dan `storage/app/public` writable |
 | Login error 419 | `php artisan optimize:clear`, hapus cookie browser |
 | Permission denied saat queue | Pastikan `storage/` dan `bootstrap/cache/` writable |
 | Notifikasi tidak muncul | Pastikan `php artisan queue:listen` sedang berjalan |
 | Role tidak tersedia | `php artisan db:seed --class=RolePermissionSeeder` |
 | Kategori kosong | `php artisan db:seed --class=CategorySeeder` |
+| Migration error di SQLite | Pastikan file `database/database.sqlite` sudah dibuat (`touch database/database.sqlite`) |

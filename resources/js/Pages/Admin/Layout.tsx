@@ -10,7 +10,7 @@ type NavItem = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const user = usePage<{ auth: { user: { name: string } }; notifications: { unread_count: number } }>().props.auth.user;
-    const unreadCount = usePage().props.notifications.unread_count;
+    const unreadCount = (usePage().props.notifications as { unread_count?: number } | undefined)?.unread_count ?? 0;
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -18,7 +18,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const navItems: NavItem[] = [
         { href: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard', active: currentPath === '/admin/dashboard' },
         { href: '/admin/tickets', label: 'Kelola Tiket', icon: 'mail', active: currentPath.startsWith('/admin/tickets') },
-        { href: '/admin/saw', label: 'Prioritas SAW', icon: 'analytics', active: currentPath.startsWith('/admin/saw') },
         { href: '/admin/users', label: 'Pengguna', icon: 'people', active: currentPath.startsWith('/admin/users') },
         { href: '/admin/categories', label: 'Kategori', icon: 'category', active: currentPath.startsWith('/admin/categories') },
         { href: '/admin/knowledge-base', label: 'Pusat Bantuan', icon: 'article', active: currentPath.startsWith('/admin/knowledge-base') },
