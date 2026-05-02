@@ -167,7 +167,7 @@ Perintah ini akan membuat seluruh tabel dan mengisi data awal:
 - **3 role** (admin, staff, customer) beserta permission-nya
 - **5 kategori** tiket (Hardware, Software, Jaringan, Akses Akun, Lainnya)
 
-#### 5. Storage Link
+#### 4. Storage Link
 
 ```bash
 php artisan storage:link
@@ -277,11 +277,12 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 
 ### Tiket Helpdesk
 
-- **SLA Tracking** — Setiap tiket punya deadline berdasarkan prioritas (critical: 2 jam, high: 8 jam, medium: 24 jam, low: 48 jam). Tiket yang melewati SLA ditandai merah.
-- **Status Flow** — `open` → `in_progress` → `resolved` → `closed`. Tiket juga bisa `cancelled`.
-- **Prioritas** — `low`, `medium`, `high`, `critical` dengan badge warna.
+- **Status Flow** — `open` → `in_progress` → `resolved` → (user confirm) → `closed`. Tiket juga bisa `cancelled`.
+- **Konfirmasi Ganda** — Saat admin set `resolved`, user harus konfirmasi: **Ya, Selesai** (→ `closed`) atau **Belum, Masih Ada Masalah** (→ `in_progress`). Histori komentar tetap tampil sebagai bukti.
+- **Prioritas** — `low`, `medium`, `high`, `critical` dengan badge warna + skor SAW.
 - **Penugasan** — Admin menugaskan staff ke tiket.
 - **Komentar Internal** — Staff/admin bisa menambahkan catatan internal yang tidak terlihat pelanggan.
+- **Komentar Terkunci** — Otomatis dikunci saat tiket `closed` atau `cancelled`.
 - **Template Respons** — Admin bisa buat template pesan cepat untuk komentar.
 - **Rating** — Pelanggan bisa memberi rating (1-5 bintang) setelah tiket selesai.
 - **Lampiran** — Upload file (foto, PDF) saat buat tiket atau komentar. Bisa ambil foto langsung dari kamera.
@@ -358,7 +359,7 @@ tickets
 ├── id, uuid (unique), user_id (FK), category_id (FK)
 ├── title, description, priority, status
 ├── assigned_to (FK users, nullable), sla_deadline
-├── resolved_at, cancelled_at
+├── resolved_at, resolved_confirmed_at, cancelled_at
 ├── rating, rating_comment
 └── timestamps
 
@@ -390,6 +391,17 @@ activity_logs
 notifications
 ├── id (UUID), type, notifiable_type, notifiable_id
 ├── data (JSON), read_at
+└── timestamps
+
+saw_configurations
+├── id, code (unique), name, type (benefit/cost)
+├── weight (decimal), sort_order
+└── timestamps
+
+personal_access_tokens
+├── id, tokenable_type, tokenable_id
+├── name, token, abilities (JSON)
+├── last_used_at, expires_at
 └── timestamps
 ```
 
@@ -437,20 +449,22 @@ File lampiran tiket disimpan di `storage/app/public/tickets/` dan diakses via `h
 
 ### SAW — Prioritas Otomatis
 
-Skor SAW (Simple Additive Weighting) dihitung otomatis dan ditampilkan di kolom **SAW** pada halaman `/admin/tickets`. Skor membantu menentukan prioritas pengerjaan tiket berdasarkan 5 kriteria (C1-C5).
+Skor SAW (Simple Additive Weighting) dihitung otomatis untuk semua tiket dan ditampilkan di kolom **SAW** pada halaman `/admin/tickets`. 5 kriteria: C1 (Prioritas), C2 (Urgensi SLA), C3 (Waktu Tunggu), C4 (Aktivitas Pelanggan), C5 (Kompleksitas). Skor di-cache 60 detik untuk performa.
 
-### Konfigurasi SLA
+---
 
-Mapping prioritas ke deadline SLA dapat dikonfigurasi di `config/sla.php`:
+## Performa & Optimasi
 
-```php
-'priorities' => [
-    'critical' => 2,  // 2 jam
-    'high' => 8,      // 8 jam
-    'medium' => 24,   // 24 jam
-    'low' => 48,      // 48 jam
-],
-```
+| Optimasi | Keterangan |
+|---|---|
+| DB Indexes | `tickets(status, priority, user_id, assigned_to)`, `comments(ticket_id)`, `notifications(notifiable_id, read_at)` |
+| Cache SAW | Skor SAW di-cache 60 detik via Redis/file |
+| Debounce Search | Input search ditunda 400ms — kurangi request server |
+| System Fonts | Font system stack (tanpa Google Fonts CDN) — FCP lebih cepat |
+| Inertia Progress | Progress bar teal saat navigasi antar halaman |
+| N+1 Prevention | Semua list pakai `->with()` eager loading |
+| Cache Dashboard | Stats dashboard admin di-cache 300 detik |
+| Static Assets | Cache 7 hari via Nginx untuk CSS/JS/font
 
 ---
 

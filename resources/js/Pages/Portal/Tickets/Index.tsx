@@ -1,4 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import PortalLayout from '../Layout';
 
 type TicketItem = {
@@ -45,10 +46,22 @@ const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tingg
 
 export default function PortalTicketIndex({ tickets, filters, statuses, priorities }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
+    const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
     const updateFilter = (key: string, value: string) => {
         router.get('/portal/tickets', { ...filters, [key]: value || undefined }, { preserveState: true });
     };
+
+    const handleSearch = (value: string) => {
+        clearTimeout(searchTimer.current);
+        searchTimer.current = setTimeout(() => {
+            router.get('/portal/tickets', { ...filters, search: value || undefined }, { preserveState: true, replace: true });
+        }, 400);
+    };
+
+    useEffect(() => {
+        return () => clearTimeout(searchTimer.current);
+    }, []);
 
     return (
         <PortalLayout>
@@ -75,7 +88,7 @@ export default function PortalTicketIndex({ tickets, filters, statuses, prioriti
                         placeholder="Cari tiket..."
                         className="w-full rounded-md border border-slate-300 py-2 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                         defaultValue={filters.search ?? ''}
-                        onChange={(e) => updateFilter('search', e.target.value)}
+                        onChange={(e) => handleSearch(e.target.value)}
                     />
                 </div>
                 <select

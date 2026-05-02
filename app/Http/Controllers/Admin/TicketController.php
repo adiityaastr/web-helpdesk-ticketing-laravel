@@ -43,13 +43,15 @@ class TicketController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $sawScores = [];
-        try {
-            $saw = new SawService();
-            $sawScores = $saw->calculateScores();
-        } catch (\Exception $e) {
-            Log::error('SAW calculation failed: '.$e->getMessage(), ['exception' => $e]);
-        }
+        $sawScores = Cache::remember('admin_saw_scores', 60, function () {
+            try {
+                $saw = new SawService();
+                return $saw->calculateScores();
+            } catch (\Exception $e) {
+                Log::error('SAW calculation failed: '.$e->getMessage(), ['exception' => $e]);
+                return [];
+            }
+        });
 
         $ticketData = TicketResource::collection($tickets)->resolve();
 

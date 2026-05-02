@@ -165,6 +165,34 @@ Update middleware: `role:staff|admin|nama_role`
 | `php artisan route:cache` | Cache routes (production) |
 | `php artisan view:cache` | Cache views (production) |
 
+### Cache Keys yang Digunakan
+
+| Key | TTL | Lokasi |
+|---|---|---|
+| `admin_dashboard_stats` | 300s | `Admin\DashboardController` |
+| `admin_dashboard_charts` | 300s | `Admin\DashboardController` |
+| `admin_saw_scores` | 60s | `Admin\TicketController` |
+| `portal_dashboard_stats_{id}` | 300s | `Portal\DashboardController` |
+| `user_auth_{id}` | 300s | `HandleInertiaRequests` |
+| `user_notif_count_{id}` | 60s | `HandleInertiaRequests` |
+
+---
+
+## Performance Optimizations
+
+| # | Optimasi | Lokasi |
+|---|----------|--------|
+| 1 | DB Indexes (8 indeks) | Migration `add_ticket_indexes` |
+| 2 | SAW score cache 60s | `Admin\TicketController` |
+| 3 | Debounce search 400ms | `Admin/Tickets/Index.tsx`, `Portal/Tickets/Index.tsx` |
+| 4 | System font stack | `app.blade.php`, `app.css` — hapus Google Fonts |
+| 5 | Inertia progress bar | `app.blade.php` — NProgress teal |
+| 6 | Dashboard stats cache 300s | `Admin\DashboardController` |
+| 7 | Auth user cache 300s | `HandleInertiaRequests` |
+| 8 | Dashboard queries with `CASE WHEN` | `Admin\DashboardController` |
+| 9 | N+1 prevention via `->with()` | Semua controller list |
+| 10 | Nginx static asset cache 7d | `nginx/default.conf` |
+
 ---
 
 ## API Routes
