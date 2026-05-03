@@ -76,7 +76,7 @@ class DashboardController extends Controller
             ]);
 
         $staffWorkload = User::query()
-            ->role(['staff', 'admin'])
+            ->role('staff')
             ->withCount(['assignedTickets'])
             ->get()
             ->map(fn ($user) => [

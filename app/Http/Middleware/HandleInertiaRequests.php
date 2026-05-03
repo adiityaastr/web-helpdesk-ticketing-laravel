@@ -22,17 +22,19 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? Cache::remember("user_auth_{$user->id}", 300, fn () => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'department' => $user->department,
-                    'roles' => $user->roles->pluck('name')->values()->all(),
-                    'is_admin' => $user->isAdmin(),
-                    'is_staff' => $user->isStaff(),
-                    'is_customer' => $user->isCustomer(),
-                ]) : null,
+                'user' => $user ? Cache::remember("user_auth_{$user->id}", 300, function () use ($user) {
+                    $roles = $user->roles->pluck('name')->values()->all();
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'department' => $user->department,
+                        'roles' => $roles,
+                        'is_staff' => in_array('staff', $roles),
+                        'is_customer' => in_array('customer', $roles),
+                    ];
+                }) : null,
             ],
             'notifications' => [
                 'unread_count' => fn () => $user

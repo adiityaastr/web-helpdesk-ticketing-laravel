@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'department'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'department', 'employee_number', 'position', 'department_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -50,14 +51,14 @@ class User extends Authenticatable
         return $this->hasMany(KnowledgeBase::class, 'author_id');
     }
 
-    public function ticketTemplates(): HasMany
+    public function dept(): BelongsTo
     {
-        return $this->hasMany(TicketTemplate::class, 'created_by');
+        return $this->belongsTo(Department::class, 'department_id');
     }
 
     public function isAdmin(): bool
     {
-        return $this->hasRole('admin');
+        return $this->isStaff();
     }
 
     public function isStaff(): bool
@@ -72,6 +73,6 @@ class User extends Authenticatable
 
     public function isStaffOrAdmin(): bool
     {
-        return $this->hasAnyRole(['staff', 'admin']);
+        return $this->isStaff();
     }
 }

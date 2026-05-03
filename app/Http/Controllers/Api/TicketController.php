@@ -83,7 +83,7 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket): JsonResponse
     {
-        if ($ticket->user_id !== auth()->id() && ! auth()->user()->isStaffOrAdmin()) {
+        if ($ticket->user_id !== auth()->id() && ! auth()->user()->isStaff()) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -96,7 +96,7 @@ class TicketController extends Controller
 
     public function comment(Request $request, Ticket $ticket): JsonResponse
     {
-        if ($ticket->user_id !== auth()->id() && ! auth()->user()->isStaffOrAdmin()) {
+        if ($ticket->user_id !== auth()->id() && ! auth()->user()->isStaff()) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 

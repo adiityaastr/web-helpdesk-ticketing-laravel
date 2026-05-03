@@ -15,11 +15,20 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         $stats = Cache::remember("portal_dashboard_stats_{$user->id}", 300, function () use ($user) {
+            $row = Ticket::query()
+                ->where('user_id', $user->id)
+                ->selectRaw("
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN status = 'open' THEN 1 END) as open,
+                    COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+                    COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved
+                ")
+                ->first();
             return [
-                'total' => Ticket::query()->where('user_id', $user->id)->count(),
-                'open' => Ticket::query()->where('user_id', $user->id)->where('status', 'open')->count(),
-                'in_progress' => Ticket::query()->where('user_id', $user->id)->where('status', 'in_progress')->count(),
-                'resolved' => Ticket::query()->where('user_id', $user->id)->where('status', 'resolved')->count(),
+                'total' => (int) $row->total,
+                'open' => (int) $row->open,
+                'in_progress' => (int) $row->in_progress,
+                'resolved' => (int) $row->resolved,
             ];
         });
 

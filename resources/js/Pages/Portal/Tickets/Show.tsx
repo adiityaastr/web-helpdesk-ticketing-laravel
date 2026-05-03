@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { Link, useForm, usePage, router } from '@inertiajs/react';
 import PortalLayout from '../Layout';
+import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
 
 type Ticket = {
     id: number;
@@ -39,36 +40,12 @@ type Props = {
     comments: Comment[];
 };
 
-const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-        open: 'bg-blue-50 text-blue-700',
-        in_progress: 'bg-orange-50 text-orange-700',
-        resolved: 'bg-emerald-50 text-emerald-700',
-        closed: 'bg-slate-100 text-slate-600',
-        cancelled: 'bg-rose-50 text-rose-700',
-    };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
-};
-
-const priorityBadge = (priority: string) => {
-    const map: Record<string, string> = {
-        critical: 'bg-rose-50 text-rose-700',
-        high: 'bg-orange-50 text-orange-700',
-        medium: 'bg-amber-50 text-amber-700',
-        low: 'bg-green-50 text-green-700',
-    };
-    return map[priority] ?? 'bg-slate-100 text-slate-600';
-};
-
-const statusLabel: Record<string, string> = { open: 'Terbuka', in_progress: 'Sedang Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
-const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
-
-export default function PortalTicketShow({ ticket: ticketProp, comments }: Props) {
+export default React.memo(function PortalTicketShow({ ticket: ticketProp, comments }: Props) {
     const ticket = ('data' in ticketProp ? ticketProp.data : ticketProp) as Ticket;
     const page = usePage<{ flash: { success?: string; error?: string }; auth: { user: { roles?: string[] } | null } }>();
     const { flash } = page.props;
     const roles = page.props.auth.user?.roles ?? [];
-    const staffOrAdmin = roles.includes('staff') || roles.includes('admin');
+    const staffOrAdmin = roles.includes('staff');
     const [ratingValue, setRatingValue] = useState(ticket.rating ?? 0);
     const [hoverRating, setHoverRating] = useState(0);
     const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
@@ -388,4 +365,4 @@ export default function PortalTicketShow({ ticket: ticketProp, comments }: Props
             </div>
         </PortalLayout>
     );
-}
+});

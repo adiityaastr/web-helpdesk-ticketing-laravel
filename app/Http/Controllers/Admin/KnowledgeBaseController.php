@@ -7,6 +7,7 @@ use App\Models\KnowledgeBase;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +25,7 @@ class KnowledgeBaseController extends Controller
 
         return Inertia::render('Admin/KnowledgeBase/Index', [
             'articles' => $articles,
-            'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 

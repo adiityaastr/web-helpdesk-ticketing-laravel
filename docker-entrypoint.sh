@@ -59,6 +59,10 @@ done
 echo "==> Seeding database..."
 php artisan db:seed --force 2>/dev/null || true
 
+echo "==> Warming caches..."
+php artisan optimize
+php artisan event:cache 2>/dev/null || true
+
 echo "==> Setup complete, starting PHP-FPM..."
 
 # ------------------------------------------------------------------

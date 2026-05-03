@@ -1,5 +1,7 @@
+import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import PortalLayout from './Layout';
+import { statusBadge, statusLabel } from '../../Utils/badges';
 
 type TicketItem = {
     id: number;
@@ -21,20 +23,7 @@ type Props = {
     };
 };
 
-const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-        open: 'bg-blue-50 text-blue-700',
-        in_progress: 'bg-orange-50 text-orange-700',
-        resolved: 'bg-emerald-50 text-emerald-700',
-        closed: 'bg-slate-100 text-slate-600',
-        cancelled: 'bg-rose-50 text-rose-700',
-    };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
-};
-
-const statusLabel: Record<string, string> = { open: 'Terbuka', in_progress: 'Sedang Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
-
-export default function PortalDashboard({ recentTickets, stats }: Props) {
+export default React.memo(function PortalDashboard({ recentTickets, stats }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
 
     return (
@@ -137,4 +126,4 @@ export default function PortalDashboard({ recentTickets, stats }: Props) {
             </div>
         </PortalLayout>
     );
-}
+});

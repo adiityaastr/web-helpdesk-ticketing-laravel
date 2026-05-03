@@ -1,14 +1,13 @@
 import { Link } from '@inertiajs/react';
-import {
-    ArcElement,
-    Chart as ChartJS,
-    Legend,
-    Tooltip,
-} from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
+import React, { Suspense } from 'react';
 import AdminLayout from './Layout';
+import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../Utils/badges';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+const Doughnut = React.lazy(() => import('react-chartjs-2').then(async (mod) => {
+    const { ArcElement, Chart, Tooltip, Legend } = await import('chart.js');
+    Chart.register(ArcElement, Tooltip, Legend);
+    return { default: mod.Doughnut };
+}));
 
 type TicketSummary = {
     id: number;
@@ -58,31 +57,7 @@ const priorityColors: Record<string, string> = {
     low: '#22c55e',
 };
 
-const statusLabel: Record<string, string> = { open: 'Menunggu', in_progress: 'Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
-const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
-
-const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-        open: 'bg-blue-50 text-blue-700',
-        in_progress: 'bg-orange-50 text-orange-700',
-        resolved: 'bg-emerald-50 text-emerald-700',
-        closed: 'bg-slate-100 text-slate-600',
-        cancelled: 'bg-rose-50 text-rose-700',
-    };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
-};
-
-const priorityBadge = (priority: string) => {
-    const map: Record<string, string> = {
-        critical: 'bg-rose-50 text-rose-700',
-        high: 'bg-orange-50 text-orange-700',
-        medium: 'bg-amber-50 text-amber-700',
-        low: 'bg-green-50 text-green-700',
-    };
-    return map[priority] ?? 'bg-slate-100 text-slate-600';
-};
-
-export default function AdminDashboard({ stats, priorityChart, statusChart, recentTickets, staffWorkload }: Props) {
+export default React.memo(function AdminDashboard({ stats, priorityChart, statusChart, recentTickets, staffWorkload }: Props) {
     return (
         <AdminLayout>
             <div className="mb-6">
@@ -121,26 +96,30 @@ export default function AdminDashboard({ stats, priorityChart, statusChart, rece
                 <div className="rounded-lg border border-slate-200 bg-white p-5">
                     <h2 className="mb-4 text-sm font-semibold text-slate-900">Distribusi Status</h2>
                     <div className="mx-auto max-w-xs">
-                        <Doughnut
-                            data={{
-                                labels: statusChart.labels.map((l) => statusLabel[l] ?? l),
-                                datasets: [{ data: statusChart.values, backgroundColor: statusChart.labels.map((l) => statusColors[l] ?? '#94a3b8') }],
-                            }}
-                            options={{ plugins: { legend: { position: 'bottom' } } }}
-                        />
+                        <Suspense fallback={<div className="h-48 flex items-center justify-center text-slate-400 text-sm">Loading chart...</div>}>
+                            <Doughnut
+                                data={{
+                                    labels: statusChart.labels.map((l) => statusLabel[l] ?? l),
+                                    datasets: [{ data: statusChart.values, backgroundColor: statusChart.labels.map((l) => statusColors[l] ?? '#94a3b8') }],
+                                }}
+                                options={{ plugins: { legend: { position: 'bottom' } } }}
+                            />
+                        </Suspense>
                     </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 bg-white p-5">
                     <h2 className="mb-4 text-sm font-semibold text-slate-900">Distribusi Prioritas</h2>
                     <div className="mx-auto max-w-xs">
-                        <Doughnut
-                            data={{
-                                labels: priorityChart.labels.map((l) => priorityLabel[l] ?? l),
-                                datasets: [{ data: priorityChart.values, backgroundColor: priorityChart.labels.map((l) => priorityColors[l] ?? '#94a3b8') }],
-                            }}
-                            options={{ plugins: { legend: { position: 'bottom' } } }}
-                        />
+                        <Suspense fallback={<div className="h-48 flex items-center justify-center text-slate-400 text-sm">Loading chart...</div>}>
+                            <Doughnut
+                                data={{
+                                    labels: priorityChart.labels.map((l) => priorityLabel[l] ?? l),
+                                    datasets: [{ data: priorityChart.values, backgroundColor: priorityChart.labels.map((l) => priorityColors[l] ?? '#94a3b8') }],
+                                }}
+                                options={{ plugins: { legend: { position: 'bottom' } } }}
+                            />
+                        </Suspense>
                     </div>
                 </div>
             </div>
@@ -192,4 +171,4 @@ export default function AdminDashboard({ stats, priorityChart, statusChart, rece
             </div>
         </AdminLayout>
     );
-}
+});

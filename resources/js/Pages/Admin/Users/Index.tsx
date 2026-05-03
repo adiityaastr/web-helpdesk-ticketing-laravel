@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { router, usePage, useForm } from '@inertiajs/react';
 import AdminLayout from '../Layout';
 
@@ -7,6 +7,8 @@ type UserItem = {
     name: string;
     email: string;
     phone: string | null;
+    employee_number: string | null;
+    position: string | null;
     department: string | null;
     roles: string[];
     created_at: string | null;
@@ -16,25 +18,39 @@ type Props = {
     users: { data: UserItem[] };
     filters: { search?: string; role?: string };
     roles: string[];
+    positions: string[];
+    departments: { id: number; name: string }[];
 };
 
 const roleBadge = (role: string) => {
-    const map: Record<string, string> = { admin: 'bg-rose-50 text-rose-700', staff: 'bg-blue-50 text-blue-700', customer: 'bg-slate-100 text-slate-600' };
+    const map: Record<string, string> = { staff: 'bg-blue-50 text-blue-700', customer: 'bg-slate-100 text-slate-600' };
     return map[role] ?? 'bg-slate-100 text-slate-600';
 };
 
-const roleLabel: Record<string, string> = { admin: 'Admin', staff: 'Staff IT', customer: 'Pengguna' };
+const roleLabel: Record<string, string> = { staff: 'Staff IT', customer: 'Pengguna' };
 
-export default function UserIndex({ users, filters, roles }: Props) {
+const positionBadge = (position: string) => {
+    const map: Record<string, string> = {
+        Manager: 'bg-teal-50 text-teal-700',
+        SPV: 'bg-blue-50 text-blue-700',
+        Staff: 'bg-slate-100 text-slate-600'
+    };
+    return map[position] ?? 'bg-slate-100 text-slate-600';
+};
+
+export default React.memo(function UserIndex({ users, filters, roles, positions, departments }: Props) {
     const page = usePage<{ flash: { success?: string; error?: string }; auth: { user: { id: number } } }>();
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const createForm = useForm({
+        employee_number: '',
         name: '',
         email: '',
         phone: '',
-        department: '',
+        position: '',
+        department_id: '',
         password: '',
         role: 'customer',
     });
@@ -43,7 +59,8 @@ export default function UserIndex({ users, filters, roles }: Props) {
         name: '',
         email: '',
         phone: '',
-        department: '',
+        position: '',
+        department_id: '',
         password: '',
         role: 'customer',
     });
@@ -55,16 +72,25 @@ export default function UserIndex({ users, filters, roles }: Props) {
     const openCreate = () => {
         setEditingUser(null);
         createForm.reset();
+        const nip = String(Math.floor(10000000 + Math.random() * 90000000));
+        createForm.setData({
+            ...createForm.data,
+            employee_number: nip,
+            email: `${nip}@company.com`,
+        });
+        setShowPassword(false);
         setShowModal(true);
     };
 
     const openEdit = (user: UserItem) => {
         setEditingUser(user);
+        const dept = departments.find(d => d.name === user.department);
         editForm.setData({
             name: user.name,
             email: user.email,
             phone: user.phone ?? '',
-            department: user.department ?? '',
+            position: user.position ?? '',
+            department_id: dept ? String(dept.id) : '',
             password: '',
             role: user.roles[0] ?? 'customer',
         });
@@ -115,6 +141,8 @@ export default function UserIndex({ users, filters, roles }: Props) {
                             <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Email</th>
                             <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Departemen</th>
                             <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Peran</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">NIP</th>
+                            <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Jabatan</th>
                             <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Aksi</th>
                         </tr>
                     </thead>
@@ -130,6 +158,12 @@ export default function UserIndex({ users, filters, roles }: Props) {
                                             <span key={role} className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${roleBadge(role)}`}>{roleLabel[role] ?? role}</span>
                                         ))}
                                     </div>
+                                </td>
+                                <td className="px-5 py-3 font-mono text-slate-400">{user.employee_number ?? '-'}</td>
+                                <td className="px-5 py-3">
+                                    {user.position ? (
+                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${positionBadge(user.position)}`}>{user.position}</span>
+                                    ) : '-'}
                                 </td>
                                 <td className="px-5 py-3">
                                     <div className="flex gap-3">
@@ -162,19 +196,38 @@ export default function UserIndex({ users, filters, roles }: Props) {
                                     <input type="email" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.email} onChange={(e) => editForm.setData('email', e.target.value)} />
                                     {editForm.errors.email && <p className="mt-1 text-xs text-rose-600">{editForm.errors.email}</p>}
                                 </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Telepon</label>
+                                    <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.phone} onChange={(e) => editForm.setData('phone', e.target.value)} />
+                                </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Telepon</label>
-                                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.phone} onChange={(e) => editForm.setData('phone', e.target.value)} />
+                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Departemen</label>
+                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.department_id} onChange={(e) => editForm.setData('department_id', e.target.value)}>
+                                            <option value="">Pilih departemen</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Departemen</label>
-                                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.department} onChange={(e) => editForm.setData('department', e.target.value)} />
+                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Jabatan</label>
+                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.position} onChange={(e) => editForm.setData('position', e.target.value)}>
+                                            <option value="">Pilih jabatan</option>
+                                            {positions.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
                                     </div>
                                 </div>
                                 <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">NIP</label>
+                                    <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">{editingUser?.employee_number ?? '-'}</div>
+                                </div>
+                                <div>
                                     <label className="mb-1.5 block text-sm font-medium text-slate-700">Password (kosongkan jika tidak diubah)</label>
-                                    <input type="password" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.password} onChange={(e) => editForm.setData('password', e.target.value)} />
+                                    <div className="relative">
+                                        <input type={showPassword ? 'text' : 'password'} className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.password} onChange={(e) => editForm.setData('password', e.target.value)} />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                        </button>
+                                    </div>
                                     {editForm.errors.password && <p className="mt-1 text-xs text-rose-600">{editForm.errors.password}</p>}
                                 </div>
                                 <div>
@@ -197,22 +250,41 @@ export default function UserIndex({ users, filters, roles }: Props) {
                                 </div>
                                 <div>
                                     <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
-                                    <input type="email" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.email} onChange={(e) => createForm.setData('email', e.target.value)} />
+                                    <input type="email" className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none" value={createForm.data.email} readOnly />
                                     {createForm.errors.email && <p className="mt-1 text-xs text-rose-600">{createForm.errors.email}</p>}
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Telepon</label>
+                                    <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.phone} onChange={(e) => createForm.setData('phone', e.target.value)} />
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Telepon</label>
-                                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.phone} onChange={(e) => createForm.setData('phone', e.target.value)} />
+                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Departemen</label>
+                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.department_id} onChange={(e) => createForm.setData('department_id', e.target.value)}>
+                                            <option value="">Pilih departemen</option>
+                                            {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                        </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Departemen</label>
-                                        <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.department} onChange={(e) => createForm.setData('department', e.target.value)} />
+                                        <label className="mb-1.5 block text-sm font-medium text-slate-700">Jabatan</label>
+                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.position} onChange={(e) => createForm.setData('position', e.target.value)}>
+                                            <option value="">Pilih jabatan</option>
+                                            {positions.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
                                     </div>
                                 </div>
                                 <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">NIP (Auto)</label>
+                                    <div className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-600">{createForm.data.employee_number}</div>
+                                </div>
+                                <div>
                                     <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-                                    <input type="password" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.password} onChange={(e) => createForm.setData('password', e.target.value)} />
+                                    <div className="relative">
+                                        <input type={showPassword ? 'text' : 'password'} className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.password} onChange={(e) => createForm.setData('password', e.target.value)} />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                        </button>
+                                    </div>
                                     {createForm.errors.password && <p className="mt-1 text-xs text-rose-600">{createForm.errors.password}</p>}
                                 </div>
                                 <div>
@@ -232,4 +304,4 @@ export default function UserIndex({ users, filters, roles }: Props) {
             )}
         </AdminLayout>
     );
-}
+});

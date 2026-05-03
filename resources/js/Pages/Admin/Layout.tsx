@@ -20,8 +20,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: '/admin/tickets', label: 'Kelola Tiket', icon: 'mail', active: currentPath.startsWith('/admin/tickets') },
         { href: '/admin/users', label: 'Pengguna', icon: 'people', active: currentPath.startsWith('/admin/users') },
         { href: '/admin/categories', label: 'Kategori', icon: 'category', active: currentPath.startsWith('/admin/categories') },
+        { href: '/admin/departments', label: 'Departemen', icon: 'apartment', active: currentPath.startsWith('/admin/departments') },
         { href: '/admin/knowledge-base', label: 'Pusat Bantuan', icon: 'article', active: currentPath.startsWith('/admin/knowledge-base') },
-        { href: '/admin/templates', label: 'Template Respon', icon: 'description', active: currentPath.startsWith('/admin/templates') },
     ];
 
     const handleLogout = () => {

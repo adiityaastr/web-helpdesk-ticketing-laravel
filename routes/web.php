@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\KnowledgeBaseController as AdminKnowledgeBaseController;
-use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AuthController;
@@ -20,7 +20,7 @@ Route::get('/', function (): RedirectResponse {
     $user = Auth::user();
 
     if ($user) {
-        if ($user->hasAnyRole(['staff', 'admin'])) {
+        if ($user->hasRole('staff')) {
             return redirect()->route('admin.dashboard');
         }
         return redirect()->route('portal.dashboard');
@@ -47,7 +47,7 @@ Route::middleware('auth')->prefix('portal')->name('portal.')->group(function ():
         Route::get('/knowledge-base/{knowledgeBase}', [PortalKnowledgeBaseController::class, 'show'])->name('knowledge-base.show');
     });
 
-    Route::middleware(['role:customer|staff|admin'])->group(function (): void {
+    Route::middleware(['role:customer|staff'])->group(function (): void {
         Route::get('/tickets/{ticket}', [PortalTicketController::class, 'show'])->name('tickets.show');
         Route::post('/tickets/{ticket}/comments', [PortalTicketController::class, 'comment'])->name('tickets.comment');
         Route::post('/tickets/{ticket}/rate', [PortalTicketController::class, 'rate'])->name('tickets.rate');
@@ -58,7 +58,7 @@ Route::middleware('auth')->prefix('portal')->name('portal.')->group(function ():
     });
 });
 
-Route::middleware(['auth', 'role:staff|admin'])->prefix('admin')->name('admin.')->group(function (): void {
+Route::middleware(['auth', 'role:staff'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index');
     Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show');
@@ -68,7 +68,7 @@ Route::middleware(['auth', 'role:staff|admin'])->prefix('admin')->name('admin.')
     Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
     Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
     Route::resource('knowledge-base', AdminKnowledgeBaseController::class)->except(['create', 'edit', 'show']);
-    Route::resource('templates', TemplateController::class)->except(['create', 'edit', 'show']);
+    Route::resource('departments', DepartmentController::class)->except(['create', 'edit', 'show']);
 });
 
 Route::middleware('auth')->group(function (): void {

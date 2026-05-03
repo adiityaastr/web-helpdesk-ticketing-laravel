@@ -30,15 +30,13 @@ class RolePermissionSeeder extends Seeder
 
         $customer = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
         $staff = Role::firstOrCreate(['name' => 'staff', 'guard_name' => 'web']);
-        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
 
         $customer->syncPermissions(['tickets.create', 'tickets.view.own', 'tickets.comment']);
-        $staff->syncPermissions(['tickets.view.all', 'tickets.update', 'tickets.comment']);
-        $admin->syncPermissions($permissions);
+        $staff->syncPermissions($permissions);
 
         $adminUser = User::where('email', 'test@example.com')->first();
         if ($adminUser) {
-            $adminUser->syncRoles(['admin']);
+            $adminUser->syncRoles(['staff']);
         }
     }
 }

@@ -32,7 +32,12 @@ class SawService
             return [];
         }
 
-        $matrix = $this->buildDecisionMatrix($tickets);
+        $userTicketCounts = Ticket::query()
+            ->selectRaw('user_id, COUNT(*) as total')
+            ->groupBy('user_id')
+            ->pluck('total', 'user_id');
+
+        $matrix = $this->buildDecisionMatrix($tickets, $userTicketCounts);
         $normalized = $this->normalize($matrix);
         $scores = $this->weightedSum($normalized);
 
@@ -41,14 +46,14 @@ class SawService
         return $scores;
     }
 
-    private function buildDecisionMatrix($tickets): array
+    private function buildDecisionMatrix($tickets, $userTicketCounts): array
     {
         $matrix = [];
 
         foreach ($tickets as $ticket) {
             $row = [];
             foreach ($this->criteria as $code) {
-                $row[$code] = $this->getCriterionValue($ticket, $code);
+                $row[$code] = $this->getCriterionValue($ticket, $code, $userTicketCounts);
             }
             $matrix[$ticket->id] = $row;
         }
@@ -56,13 +61,13 @@ class SawService
         return $matrix;
     }
 
-    private function getCriterionValue(Ticket $ticket, string $code): float
+    private function getCriterionValue(Ticket $ticket, string $code, $userTicketCounts): float
     {
         return match ($code) {
             'C1' => $this->priorityScore($ticket->priority),
             'C2' => $this->slaUrgency($ticket),
             'C3' => $this->waitingTime($ticket),
-            'C4' => $this->customerActivity($ticket),
+            'C4' => $this->customerActivity($ticket, $userTicketCounts),
             'C5' => $this->complexity($ticket),
             default => 0,
         };
@@ -99,9 +104,9 @@ class SawService
         return $ticket->created_at->diffInHours(now());
     }
 
-    private function customerActivity(Ticket $ticket): float
+    private function customerActivity(Ticket $ticket, \Illuminate\Support\Collection $userTicketCounts): float
     {
-        return (float) Ticket::query()->where('user_id', $ticket->user_id)->count();
+        return (float) ($userTicketCounts[$ticket->user_id] ?? 0);
     }
 
     private function complexity(Ticket $ticket): float

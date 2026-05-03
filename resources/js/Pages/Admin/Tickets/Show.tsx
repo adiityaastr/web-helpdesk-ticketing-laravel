@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 import { Link, useForm, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../Layout';
+import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
 
 type Ticket = {
     id: number;
@@ -42,7 +43,6 @@ type ActivityLog = {
 
 type CategoryOption = { id: number; name: string };
 type StaffOption = { id: number; name: string };
-type TemplateOption = { id: number; title: string; content: string };
 
 type Props = {
     ticket: Ticket | { data: Ticket };
@@ -52,27 +52,12 @@ type Props = {
     staffUsers: StaffOption[];
     statuses: string[];
     priorities: string[];
-    templates: TemplateOption[];
 };
 
-const statusBadge = (status: string) => {
-    const map: Record<string, string> = { open: 'bg-blue-50 text-blue-700', in_progress: 'bg-orange-50 text-orange-700', resolved: 'bg-emerald-50 text-emerald-700', closed: 'bg-slate-100 text-slate-600', cancelled: 'bg-rose-50 text-rose-700' };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
-};
-
-const priorityBadge = (priority: string) => {
-    const map: Record<string, string> = { critical: 'bg-rose-50 text-rose-700', high: 'bg-orange-50 text-orange-700', medium: 'bg-amber-50 text-amber-700', low: 'bg-green-50 text-green-700' };
-    return map[priority] ?? 'bg-slate-100 text-slate-600';
-};
-
-const statusLabel: Record<string, string> = { open: 'Terbuka', in_progress: 'Sedang Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
-const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
-
-export default function AdminTicketShow({ ticket: ticketProp, comments, activityLogs, categories, staffUsers, statuses, priorities, templates }: Props) {
+export default React.memo(function AdminTicketShow({ ticket: ticketProp, comments, activityLogs, categories, staffUsers, statuses, priorities }: Props) {
     const ticket = ('data' in ticketProp ? ticketProp.data : ticketProp) as Ticket;
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showInternal, setShowInternal] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState('');
 
     const updateForm = useForm({
         priority: ticket.priority ?? 'medium',
@@ -105,16 +90,6 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                 router.reload({ only: ['ticket', 'comments', 'activityLogs'] });
             },
         });
-    };
-
-    const handleTemplateChange = (templateId: string) => {
-        setSelectedTemplate(templateId);
-        if (templateId) {
-            const template = templates.find((t) => t.id === Number(templateId));
-            if (template) {
-                commentForm.setData('message', template.content);
-            }
-        }
     };
 
     return (
@@ -215,17 +190,7 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                                 <p className="mt-1 text-xs text-slate-400">Jika kendala belum terselesaikan, silakan buat <Link href="/portal/tickets/create" className="font-medium underline hover:text-slate-600">tiket baru</Link>.</p>
                             </div>
                         ) : (
-                            <>
-                                {templates.length > 0 && (
-                                    <div className="mb-3">
-                                        <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={selectedTemplate} onChange={(e) => handleTemplateChange(e.target.value)}>
-                                            <option value="">Gunakan template...</option>
-                                            {templates.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-
-                                <form onSubmit={submitComment} className="mb-6 space-y-3">
+                            <form onSubmit={submitComment} className="mb-6 space-y-3">
                                     <textarea
                                         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                                         rows={3}
@@ -243,7 +208,6 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
                                         </button>
                                     </div>
                                 </form>
-                            </>
                         )}
 
                         <div className="space-y-3">
@@ -316,4 +280,4 @@ export default function AdminTicketShow({ ticket: ticketProp, comments, activity
             </div>
         </AdminLayout>
     );
-}
+});

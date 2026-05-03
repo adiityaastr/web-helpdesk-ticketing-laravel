@@ -42,7 +42,7 @@ const actionIcon: Record<string, string> = {
 
 export default function NotificationsIndex({ notifications }: Props) {
     const roles = usePage<{ auth: { user: { roles: string[] } } }>().props.auth.user?.roles ?? [];
-    const isStaffOrAdmin = roles.includes('staff') || roles.includes('admin');
+    const isStaffOrAdmin = roles.includes('staff');
 
     const content = (
         <>

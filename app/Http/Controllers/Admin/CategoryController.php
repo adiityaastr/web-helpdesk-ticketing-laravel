@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,6 +38,8 @@ class CategoryController extends Controller
             'description' => $request->string('description') ?: null,
         ]);
 
+        Cache::forget('reference_categories');
+
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil ditambahkan.');
     }
 
@@ -53,12 +56,16 @@ class CategoryController extends Controller
             'description' => $request->string('description') ?: null,
         ]);
 
+        Cache::forget('reference_categories');
+
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
         $category->delete();
+
+        Cache::forget('reference_categories');
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dihapus.');
     }

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
@@ -17,7 +19,7 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $userQuery = User::query()
-            ->with('roles')
+            ->with(['roles', 'dept'])
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
                 $search = addcslashes($request->string('search')->toString(), '%_');
                 $q->where('name', 'like', "%{$search}%")
@@ -32,10 +34,12 @@ class UserController extends Controller
 
         $users->through(fn ($user) => [
             'id' => $user->id,
+            'employee_number' => $user->employee_number,
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'department' => $user->department,
+            'position' => $user->position,
+            'department' => $user->dept?->name,
             'roles' => $user->roles->pluck('name')->values()->all(),
             'created_at' => $user->created_at?->toDateTimeString(),
         ]);
@@ -43,7 +47,9 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['search', 'role']),
-            'roles' => ['customer', 'staff', 'admin'],
+            'roles' => ['customer', 'staff'],
+            'positions' => ['Manager', 'SPV', 'Staff'],
+            'departments' => Cache::rememberForever('reference_departments', fn () => Department::query()->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 
@@ -53,16 +59,27 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'department' => ['nullable', 'string', 'max:100'],
+            'position' => ['nullable', 'string', 'in:Manager,SPV,Staff'],
+            'department_id' => ['nullable', 'exists:departments,id'],
             'password' => ['required', Rules\Password::defaults()],
-            'role' => ['required', Rule::in(['customer', 'staff', 'admin'])],
+            'employee_number' => ['nullable', 'string', 'max:8', 'unique:users,employee_number'],
+            'role' => ['required', Rule::in(['customer', 'staff'])],
         ]);
 
+        $employeeNumber = $request->string('employee_number')->toString() ?: null;
+        if (! $employeeNumber) {
+            do {
+                $employeeNumber = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+            } while (User::where('employee_number', $employeeNumber)->exists());
+        }
+
         $user = User::create([
+            'employee_number' => $employeeNumber,
             'name' => $request->string('name'),
             'email' => $request->string('email'),
             'phone' => $request->string('phone') ?: null,
-            'department' => $request->string('department') ?: null,
+            'position' => $request->string('position') ?: null,
+            'department_id' => $request->integer('department_id') ?: null,
             'password' => Hash::make($request->string('password')),
         ]);
 
@@ -77,16 +94,18 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
-            'department' => ['nullable', 'string', 'max:100'],
+            'position' => ['nullable', 'string', 'in:Manager,SPV,Staff'],
+            'department_id' => ['nullable', 'exists:departments,id'],
             'password' => ['nullable', Rules\Password::defaults()],
-            'role' => ['required', Rule::in(['customer', 'staff', 'admin'])],
+            'role' => ['required', Rule::in(['customer', 'staff'])],
         ]);
 
         $user->update([
             'name' => $request->string('name'),
             'email' => $request->string('email'),
             'phone' => $request->string('phone') ?: null,
-            'department' => $request->string('department') ?: null,
+            'position' => $request->string('position') ?: null,
+            'department_id' => $request->integer('department_id') ?: null,
             ...($request->filled('password') ? ['password' => Hash::make($request->string('password'))] : []),
         ]);
 

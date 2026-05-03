@@ -12,6 +12,16 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react';
+                    if (id.includes('node_modules/@inertiajs')) return 'inertia';
+                },
+            },
+        },
+    },
     server: {
         host: '0.0.0.0',
         port: 5173,

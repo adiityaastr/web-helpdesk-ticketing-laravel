@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import AdminLayout from '../Layout';
+import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
 
 type TicketItem = {
     id: number;
@@ -17,31 +18,16 @@ type TicketItem = {
 };
 
 type CategoryOption = { id: number; name: string };
-type StaffOption = { id: number; name: string };
 
 type Props = {
     tickets: { data: TicketItem[] };
-            filters: { status?: string; priority?: string; category_id?: string; assigned_to?: string; search?: string };
+            filters: { status?: string; priority?: string; category_id?: string; search?: string };
             statuses: string[];
     priorities: string[];
     categories: CategoryOption[];
-    staffUsers: StaffOption[];
 };
 
-const statusBadge = (status: string) => {
-    const map: Record<string, string> = { open: 'bg-blue-50 text-blue-700', in_progress: 'bg-orange-50 text-orange-700', resolved: 'bg-emerald-50 text-emerald-700', closed: 'bg-slate-100 text-slate-600', cancelled: 'bg-rose-50 text-rose-700' };
-    return map[status] ?? 'bg-slate-100 text-slate-600';
-};
-
-const priorityBadge = (priority: string) => {
-    const map: Record<string, string> = { critical: 'bg-rose-50 text-rose-700', high: 'bg-orange-50 text-orange-700', medium: 'bg-amber-50 text-amber-700', low: 'bg-green-50 text-green-700' };
-    return map[priority] ?? 'bg-slate-100 text-slate-600';
-};
-
-const statusLabel: Record<string, string> = { open: 'Terbuka', in_progress: 'Sedang Diproses', resolved: 'Selesai', closed: 'Ditutup', cancelled: 'Dibatalkan' };
-const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
-
-export default function AdminTicketIndex({ tickets, filters, statuses, priorities, categories, staffUsers }: Props) {
+export default React.memo(function AdminTicketIndex({ tickets, filters, statuses, priorities, categories }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
     const searchTimer = useRef<ReturnType<typeof setTimeout>>();
     const searchRef = useRef<HTMLInputElement>(null);
@@ -101,10 +87,6 @@ export default function AdminTicketIndex({ tickets, filters, statuses, prioritie
                     <option value="">Semua Kategori</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-                <select className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={filters.assigned_to ?? ''} onChange={(e) => updateFilter('assigned_to', e.target.value)}>
-                    <option value="">Semua Petugas</option>
-                    {staffUsers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -153,4 +135,4 @@ export default function AdminTicketIndex({ tickets, filters, statuses, prioritie
             </div>
         </AdminLayout>
     );
-}
+});

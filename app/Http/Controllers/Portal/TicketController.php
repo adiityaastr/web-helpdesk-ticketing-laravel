@@ -52,7 +52,7 @@ class TicketController extends Controller
     public function create(): Response
     {
         return Inertia::render('Portal/Tickets/Create', [
-            'categories' => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get(),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
     }
@@ -105,7 +105,7 @@ class TicketController extends Controller
         $ticket->load(['category', 'reporter', 'assignee', 'comments.user']);
 
         $comments = $ticket->comments
-            ->filter(fn ($c) => ! $c->is_internal || auth()->user()->isStaffOrAdmin())
+            ->filter(fn ($c) => ! $c->is_internal || auth()->user()->isStaff())
             ->map(fn ($comment) => [
                 'id' => $comment->id,
                 'message' => $comment->message,
@@ -317,7 +317,7 @@ class TicketController extends Controller
             ->unique('id');
 
         if ($action === 'created') {
-            $staffAdmins = User::role(['staff', 'admin'])->get();
+            $staffAdmins = User::role('staff')->get();
             $users = $users->merge($staffAdmins)->unique('id');
         }
 

@@ -2,7 +2,6 @@ FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache \
         mysql-dev \
-        postgresql-dev \
         libzip-dev \
         libxml2-dev \
         oniguruma-dev \
@@ -13,7 +12,7 @@ RUN apk add --no-cache \
         unzip \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
-        pdo_pgsql \
+        opcache \
         mbstring \
         xml \
         bcmath \
@@ -21,7 +20,12 @@ RUN apk add --no-cache \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd
+    && echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "opcache.revalidate_freq=2" >> /usr/local/etc/php/conf.d/opcache.ini \
+    && echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

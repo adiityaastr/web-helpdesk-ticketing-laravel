@@ -76,7 +76,12 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "laravel/pail",
+                "nunomaduro/collision",
+                "nunomaduro/termwind",
+                "laravel/mcp"
+            ]
         }
     },
     "config": {

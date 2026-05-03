@@ -9,7 +9,6 @@ use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Ticket;
-use App\Models\TicketTemplate;
 use App\Models\User;
 use App\Notifications\TicketActivityNotification;
 use App\Services\SawService;
@@ -31,7 +30,6 @@ class TicketController extends Controller
             ->when($request->string('status')->isNotEmpty(), fn ($query) => $query->where('status', $request->string('status')))
             ->when($request->string('priority')->isNotEmpty(), fn ($query) => $query->where('priority', $request->string('priority')))
             ->when($request->string('category_id')->isNotEmpty(), fn ($query) => $query->where('category_id', $request->string('category_id')))
-            ->when($request->string('assigned_to')->isNotEmpty(), fn ($query) => $query->where('assigned_to', $request->string('assigned_to')))
             ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where(function ($q) use ($request) {
                 $search = addcslashes($request->string('search')->toString(), '%_');
                 $q->where('title', 'like', "%{$search}%")
@@ -63,11 +61,10 @@ class TicketController extends Controller
             'tickets' => [
                 'data' => $ticketData,
             ],
-            'filters' => $request->only(['status', 'priority', 'category_id', 'assigned_to', 'search']),
+            'filters' => $request->only(['status', 'priority', 'category_id', 'search']),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
-            'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
-            'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 
@@ -104,11 +101,10 @@ class TicketController extends Controller
             'ticket' => new TicketResource($ticket),
             'comments' => $comments,
             'activityLogs' => $activityLogs,
-            'categories' => Category::query()->select('id', 'name')->orderBy('name')->get(),
-            'staffUsers' => User::role(['staff', 'admin'])->select('id', 'name')->orderBy('name')->get(),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
+            'staffUsers' => User::role('staff')->select('id', 'name')->orderBy('name')->get(),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
-            'templates' => TicketTemplate::query()->select('id', 'title', 'content')->orderBy('title')->get(),
         ]);
     }
 

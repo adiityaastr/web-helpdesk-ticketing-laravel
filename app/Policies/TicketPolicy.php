@@ -9,12 +9,12 @@ class TicketPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['customer', 'staff', 'admin']);
+        return $user->hasAnyRole(['customer', 'staff']);
     }
 
     public function view(User $user, Ticket $ticket): bool
     {
-        if ($user->hasAnyRole(['staff', 'admin'])) {
+        if ($user->isStaff()) {
             return true;
         }
 
@@ -23,16 +23,12 @@ class TicketPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['customer', 'staff', 'admin']);
+        return $user->hasAnyRole(['customer', 'staff']);
     }
 
     public function update(User $user, Ticket $ticket): bool
     {
-        if ($user->hasRole('admin')) {
-            return true;
-        }
-
-        if ($user->hasRole('staff')) {
+        if ($user->isStaff()) {
             return true;
         }
 
@@ -41,7 +37,7 @@ class TicketPolicy
 
     public function delete(User $user, Ticket $ticket): bool
     {
-        if ($user->hasAnyRole(['staff', 'admin'])) {
+        if ($user->isStaff()) {
             return true;
         }
 
@@ -50,7 +46,7 @@ class TicketPolicy
 
     public function comment(User $user, Ticket $ticket): bool
     {
-        if ($user->hasAnyRole(['staff', 'admin'])) {
+        if ($user->isStaff()) {
             return true;
         }
 
@@ -59,7 +55,7 @@ class TicketPolicy
 
     public function cancel(User $user, Ticket $ticket): bool
     {
-        if ($user->hasAnyRole(['staff', 'admin'])) {
+        if ($user->isStaff()) {
             return $ticket->isCancellable();
         }
 

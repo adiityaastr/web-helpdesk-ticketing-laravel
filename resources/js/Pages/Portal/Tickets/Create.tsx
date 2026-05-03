@@ -1,6 +1,7 @@
-import { FormEvent, useRef, useState, useCallback, useEffect } from 'react';
+import React, { FormEvent, useRef, useState, useCallback, useEffect } from 'react';
 import { Link, useForm } from '@inertiajs/react';
 import PortalLayout from '../Layout';
+import { priorityLabel } from '../../../Utils/badges';
 
 type Category = { id: number; name: string; slug: string };
 
@@ -9,11 +10,9 @@ type Props = {
     priorities: string[];
 };
 
-const priorityLabel: Record<string, string> = { critical: 'Kritis', high: 'Tinggi', medium: 'Sedang', low: 'Rendah' };
-
 const MAX_ATTACHMENTS = 5;
 
-export default function PortalTicketCreate({ categories, priorities }: Props) {
+export default React.memo(function PortalTicketCreate({ categories, priorities }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         category_id: '',
         title: '',
@@ -339,4 +338,4 @@ export default function PortalTicketCreate({ categories, priorities }: Props) {
             )}
         </PortalLayout>
     );
-}
+});

@@ -30,7 +30,7 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            if ($user->hasAnyRole(['staff', 'admin'])) {
+            if ($user->hasRole('staff')) {
                 return redirect()->intended(route('admin.dashboard'));
             }
 
