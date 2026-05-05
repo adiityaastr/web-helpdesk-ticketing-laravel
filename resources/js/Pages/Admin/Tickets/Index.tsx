@@ -22,7 +22,7 @@ type TicketItem = {
 type CategoryOption = { id: number; name: string };
 
 type Props = {
-    tickets: { data: TicketItem[] };
+    tickets: TicketItem[];
     filters: { status?: string; priority?: string; category_id?: string; search?: string };
     statuses: string[];
     priorities: string[];
@@ -102,10 +102,10 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
                             </tr>
                         </thead>
                         <tbody>
-                            {tickets.data.length === 0 && (
+                            {tickets.length === 0 && (
                                 <tr><td className="px-5 py-8 text-center text-slate-400" colSpan={8}>Tidak ada tiket.</td></tr>
                             )}
-                            {tickets.data.map((ticket) => (
+                            {tickets.map((ticket) => (
                                 <tr key={ticket.id} className="border-b border-slate-100 last:border-0">
                                     <td className="px-5 py-3">
                                         <div className="flex items-center gap-2">

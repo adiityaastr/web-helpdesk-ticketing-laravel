@@ -36,13 +36,15 @@ class TicketController extends Controller
 
         $sawScores = (new SawService())->getScores();
 
-        $ticketData = TicketResource::collection($tickets)->resolve();
-        foreach ($ticketData as &$t) {
+        $resolved = TicketResource::collection($tickets)->resolve();
+        $ticketItems = $resolved['data'] ?? $resolved;
+        foreach ($ticketItems as &$t) {
             $t['saw_score'] = $sawScores[$t['id']] ?? null;
         }
+        unset($t);
 
         return Inertia::render('Admin/Tickets/Index', [
-            'tickets' => ['data' => $ticketData],
+            'tickets' => $ticketItems,
             'filters' => $request->only(['status', 'priority', 'category_id', 'search']),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
