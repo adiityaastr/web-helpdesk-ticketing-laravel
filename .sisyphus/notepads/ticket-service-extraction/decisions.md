@@ -1,0 +1,2 @@
+- Decision: Implement TicketService to encapsulate ticket business logic and to drive testable API.
+- Reason: Reduce fat controllers and establish a reusable pattern for future services (T7-T9).

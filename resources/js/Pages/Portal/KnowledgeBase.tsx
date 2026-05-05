@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import PortalLayout from './Layout';
+import Icon from '@/Components/Icon';
 
 type Article = {
     id: number;
@@ -24,7 +25,7 @@ export default function KnowledgeBase({ articles }: Props) {
 
             {articles.data.length === 0 ? (
                 <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
-                    <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>article</span>
+                    <Icon name="article" size={48} className="text-slate-300" />
                     <p className="mt-2 text-slate-400">Belum ada artikel yang tersedia.</p>
                 </div>
             ) : (

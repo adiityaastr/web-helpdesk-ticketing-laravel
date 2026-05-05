@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Comment extends Model
 {
@@ -31,5 +32,18 @@ class Comment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Comment $comment): void {
+            if (! empty($comment->attachments)) {
+                foreach ($comment->attachments as $path) {
+                    if (Storage::disk('public')->exists($path)) {
+                        Storage::disk('public')->delete($path);
+                    }
+                }
+            }
+        });
     }
 }

@@ -1,7 +1,13 @@
 import React, { FormEvent, useState } from 'react';
 import { Link, useForm, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../Layout';
-import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
+import Icon from '@/Components/Icon';
+import FlashMessage from '@/Components/FlashMessage';
+import Badge from '@/Components/Badge';
+import CommentSection, { type Comment } from '@/Components/CommentSection';
+import RatingStars from '@/Components/RatingStars';
+import ConfirmDialog from '@/Components/ConfirmDialog';
+import { statusLabel, priorityLabel } from '@/Utils/badges';
 
 type Ticket = {
     id: number;
@@ -24,23 +30,7 @@ type Ticket = {
     assignee: { id: number; name: string } | null;
 };
 
-type Comment = {
-    id: number;
-    message: string;
-    is_internal: boolean;
-    attachments: string[];
-    created_at: string | null;
-    user: { id: number | null; name: string | null };
-};
-
-type ActivityLog = {
-    id: number;
-    action: string;
-    description: string | null;
-    created_at: string | null;
-    user: { name: string } | null;
-};
-
+type ActivityLog = { id: number; action: string; description: string | null; created_at: string | null; user: { name: string } | null };
 type CategoryOption = { id: number; name: string };
 type StaffOption = { id: number; name: string };
 
@@ -58,6 +48,8 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     const ticket = ('data' in ticketProp ? ticketProp.data : ticketProp) as Ticket;
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showInternal, setShowInternal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
 
     const updateForm = useForm({
         priority: ticket.priority ?? 'medium',
@@ -65,69 +57,40 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
         assigned_to: String(ticket.assignee?.id ?? ''),
     });
 
-    const commentForm = useForm({
-        message: '',
-        is_internal: false,
-        attachments: [] as File[],
-    });
-
-    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
+    const commentForm = useForm({ message: '', is_internal: false, attachments: [] as File[] });
 
     const submitUpdate = (e: FormEvent) => {
         e.preventDefault();
         updateForm.put(`/admin/tickets/${ticket.id}`, {
-            onSuccess: () => {
-                router.reload({ only: ['ticket', 'comments', 'activityLogs'] });
-            },
+            onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
         });
     };
 
-    const submitComment = (e: FormEvent) => {
-        e.preventDefault();
+    const handleCommentSubmit = (data: { message: string; is_internal?: boolean; attachments: File[] }) => {
+        commentForm.setData('message', data.message);
+        commentForm.setData('is_internal', data.is_internal ?? false);
+        commentForm.setData('attachments', data.attachments);
         commentForm.post(`/admin/tickets/${ticket.id}/comments`, {
-            onSuccess: () => {
-                commentForm.reset('message', 'attachments', 'is_internal');
-                router.reload({ only: ['ticket', 'comments', 'activityLogs'] });
-            },
+            onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
         });
     };
 
     return (
         <AdminLayout>
-            {flash.success && (
-                <div className="mb-4 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    {flash.success}
-                </div>
-            )}
-            {flash.error && (
-                <div className="mb-4 flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>error</span>
-                    {flash.error}
-                </div>
-            )}
+            <FlashMessage success={flash.success} error={flash.error} />
 
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-lg font-semibold text-slate-900">{ticket.title}</h1>
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span>
+                        <Badge variant="status" value={ticket.status} />
+                        <Badge variant="priority" value={ticket.priority} />
                     </div>
                     <p className="mt-1 text-sm text-slate-500">#{ticket.uuid?.slice(0, 8)} -- Dibuat {ticket.created_at}</p>
                 </div>
                 <div className="flex gap-2">
                     <Link href="/admin/tickets" className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Kembali</Link>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (!confirm('Yakin ingin menghapus tiket ini?')) {
-                                return;
-                            }
-                            router.delete(`/admin/tickets/${ticket.id}`);
-                        }}
-                        className="rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50"
-                    >Hapus</button>
+                    <button type="button" onClick={() => setShowDeleteConfirm(true)} className="rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50">Hapus</button>
                 </div>
             </div>
 
@@ -140,7 +103,6 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
 
                     <form onSubmit={submitUpdate} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
                         <h2 className="text-sm font-semibold text-slate-900">Kelola Tiket</h2>
-
                         <div className="grid gap-3 sm:grid-cols-3">
                             <div>
                                 <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
@@ -166,82 +128,24 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                                 {updateForm.errors.assigned_to && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.assigned_to}</p>}
                             </div>
                         </div>
-
-                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={updateForm.processing}>
-                            Simpan Perubahan
-                        </button>
+                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={updateForm.processing}>Simpan Perubahan</button>
                     </form>
 
-                    <div className="rounded-lg border border-slate-200 bg-white p-5">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h2 className="text-sm font-semibold text-slate-900">Komentar & Catatan</h2>
-                            {!commentLocked && (
-                                <label className="flex items-center gap-2 text-sm">
-                                    <input type="checkbox" checked={commentForm.data.is_internal} onChange={(e) => commentForm.setData('is_internal', e.target.checked)} className="rounded border-slate-300" />
-                                    <span className="text-slate-500">Catatan Internal</span>
-                                </label>
-                            )}
-                        </div>
-
-                        {commentLocked ? (
-                            <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                <span className="material-symbols-outlined align-middle mr-1" style={{ fontSize: '16px' }}>lock</span>
-                                Kolom komentar ditutup — tiket sudah selesai.
-                                <p className="mt-1 text-xs text-slate-400">Jika kendala belum terselesaikan, silakan buat <Link href="/portal/tickets/create" className="font-medium underline hover:text-slate-600">tiket baru</Link>.</p>
-                            </div>
-                        ) : (
-                            <form onSubmit={submitComment} className="mb-6 space-y-3">
-                                    <textarea
-                                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                                        rows={3}
-                                        placeholder={commentForm.data.is_internal ? "Tulis catatan internal..." : "Tulis komentar..."}
-                                        value={commentForm.data.message}
-                                        onChange={(e) => commentForm.setData('message', e.target.value)}
-                                    />
-                                    {commentForm.errors.message && <p className="text-xs text-rose-600">{commentForm.errors.message}</p>}
-                                    {commentForm.errors.attachments && <p className="text-xs text-rose-600">{commentForm.errors.attachments}</p>}
-                                    {commentForm.errors.is_internal && <p className="text-xs text-rose-600">{commentForm.errors.is_internal}</p>}
-                                    <div className="flex items-center gap-3">
-                                        <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700" onChange={(e) => commentForm.setData('attachments', Array.from(e.target.files ?? []))} />
-                                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={commentForm.processing}>
-                                            {commentForm.data.is_internal ? 'Simpan Catatan' : 'Kirim'}
-                                        </button>
-                                    </div>
-                                </form>
-                        )}
-
-                        <div className="space-y-3">
-                            {comments.map((comment) => (
-                                <div key={comment.id} className={`rounded-md border p-4 ${comment.is_internal ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
-                                    <div className="mb-1 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-slate-900">{comment.user.name ?? 'User'}</span>
-                                            {comment.is_internal && <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">Internal</span>}
-                                        </div>
-                                        <span className="text-xs text-slate-400">{comment.created_at ?? '-'}</span>
-                                    </div>
-                                    <p className="text-sm text-slate-600">{comment.message}</p>
-                                    {comment.attachments && comment.attachments.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {comment.attachments.map((a, i) => (
-                                                <a key={i} href={`/storage/${a}`} target="_blank" rel="noopener noreferrer" className="text-xs text-teal-600 hover:underline">Lampiran {i + 1}</a>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <CommentSection
+                        comments={comments}
+                        isLocked={commentLocked}
+                        isInternal={showInternal}
+                        onSubmit={handleCommentSubmit}
+                        onToggleInternal={setShowInternal}
+                        processing={commentForm.processing}
+                        errors={commentForm.errors}
+                    />
 
                     {ticket.rating && (
                         <div className="rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="mb-2 text-sm font-semibold text-slate-900">Rating Pengguna</h2>
                             <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <svg key={star} className={`h-5 w-5 ${star <= (ticket.rating ?? 0) ? 'text-amber-400' : 'text-slate-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                ))}
+                                <RatingStars rating={ticket.rating ?? 0} readOnly size={20} />
                                 <span className="ml-2 text-sm text-slate-500">({ticket.rating}/5)</span>
                             </div>
                             {ticket.rating_comment && <p className="mt-2 text-sm text-slate-600">{ticket.rating_comment}</p>}
@@ -278,6 +182,8 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                     </div>
                 </div>
             </div>
+
+            <ConfirmDialog open={showDeleteConfirm} title="Hapus Tiket" message="Yakin ingin menghapus tiket ini?" confirmLabel="Hapus" variant="danger" onConfirm={() => { router.delete(`/admin/tickets/${ticket.id}`); setShowDeleteConfirm(false); }} onCancel={() => setShowDeleteConfirm(false)} />
         </AdminLayout>
     );
 });

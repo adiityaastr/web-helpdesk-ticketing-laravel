@@ -1,7 +1,9 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import React, { useEffect, useRef } from 'react';
 import AdminLayout from '../Layout';
-import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
+import Icon from '@/Components/Icon';
+import FlashMessage from '@/Components/FlashMessage';
+import Badge from '@/Components/Badge';
 
 type TicketItem = {
     id: number;
@@ -21,8 +23,8 @@ type CategoryOption = { id: number; name: string };
 
 type Props = {
     tickets: { data: TicketItem[] };
-            filters: { status?: string; priority?: string; category_id?: string; search?: string };
-            statuses: string[];
+    filters: { status?: string; priority?: string; category_id?: string; search?: string };
+    statuses: string[];
     priorities: string[];
     categories: CategoryOption[];
 };
@@ -49,12 +51,7 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
 
     return (
         <AdminLayout>
-            {flash.success && (
-                <div className="mb-4 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                    {flash.success}
-                </div>
-            )}
+            <FlashMessage success={flash.success} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -65,7 +62,7 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
 
             <div className="mb-4 flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '18px' }}>search</span>
+                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         ref={searchRef}
                         type="text"
@@ -77,11 +74,11 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
                 </div>
                 <select className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={filters.status ?? ''} onChange={(e) => updateFilter('status', e.target.value)}>
                     <option value="">Semua Status</option>
-                    {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
+                    {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <select className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={filters.priority ?? ''} onChange={(e) => updateFilter('priority', e.target.value)}>
                     <option value="">Semua Prioritas</option>
-                    {priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)}
+                    {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
                 <select className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={filters.category_id ?? ''} onChange={(e) => updateFilter('category_id', e.target.value)}>
                     <option value="">Semua Kategori</option>
@@ -118,8 +115,8 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
                                     </td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.reporter?.name ?? '-'}</td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.category?.name ?? '-'}</td>
-                                    <td className="px-5 py-3"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span></td>
-                                    <td className="px-5 py-3"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span></td>
+                                    <td className="px-5 py-3"><Badge variant="priority" value={ticket.priority} /></td>
+                                    <td className="px-5 py-3"><Badge variant="status" value={ticket.status} /></td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.assignee?.name ?? 'Belum'}</td>
                                     <td className="px-5 py-3 text-slate-400">{ticket.created_at ?? '-'}</td>
                                     <td className="px-5 py-3">

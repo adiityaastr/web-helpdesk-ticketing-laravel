@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import PortalLayout from './Layout';
-import { statusBadge, statusLabel } from '../../Utils/badges';
+import Icon from '@/Components/Icon';
+import FlashMessage from '@/Components/FlashMessage';
+import Badge from '@/Components/Badge';
 
 type TicketItem = {
     id: number;
@@ -28,9 +30,7 @@ export default React.memo(function PortalDashboard({ recentTickets, stats }: Pro
 
     return (
         <PortalLayout>
-            {flash.success && (
-                <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>
-            )}
+            <FlashMessage success={flash.success} />
 
             <section className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900">Halo, {usePage<{ auth: { user: { name: string } } }>().props.auth?.user?.name?.split(' ')[0] ?? 'Pengguna'}</h2>
@@ -64,7 +64,7 @@ export default React.memo(function PortalDashboard({ recentTickets, stats }: Pro
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-5">
                     <Link href="/portal/tickets/create" className="flex h-full flex-col items-center justify-center gap-2 text-teal-600 transition hover:text-teal-700">
-                        <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>add_circle</span>
+                        <Icon name="add_circle" size={28} />
                         <span className="text-sm font-medium">Buat Tiket Baru</span>
                     </Link>
                 </div>
@@ -79,10 +79,10 @@ export default React.memo(function PortalDashboard({ recentTickets, stats }: Pro
 
                     {recentTickets.length === 0 ? (
                         <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
-                            <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>inbox</span>
+                            <Icon name="inbox" size={48} className="text-slate-300" />
                             <p className="mt-2 text-sm text-slate-400">Anda belum memiliki tiket.</p>
                             <Link href="/portal/tickets/create" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                                <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>add</span>
+                                <Icon name="add" size={18} filled />
                                 Buat Tiket Pertama
                             </Link>
                         </div>
@@ -94,12 +94,12 @@ export default React.memo(function PortalDashboard({ recentTickets, stats }: Pro
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-mono text-xs text-slate-400">#{ticket.uuid?.slice(0, 8)}</span>
-                                                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
+                                                <Badge variant="status" value={ticket.status} />
                                             </div>
                                             <h4 className="mt-1 truncate text-sm font-medium text-slate-900">{ticket.title}</h4>
                                             <p className="mt-0.5 text-xs text-slate-500">{ticket.created_at ?? '-'}</p>
                                         </div>
-                                        <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '20px' }}>chevron_right</span>
+                                        <Icon name="chevron_right" size={20} className="text-slate-300" />
                                     </Link>
                                 ))}
                             </div>
@@ -113,7 +113,7 @@ export default React.memo(function PortalDashboard({ recentTickets, stats }: Pro
                         <Link href="/portal/knowledge-base" className="block rounded-lg border border-slate-200 bg-white p-4 transition hover:border-teal-300">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50">
-                                    <span className="material-symbols-outlined text-teal-600" style={{ fontSize: '20px' }}>article</span>
+                                    <Icon name="article" size={20} className="text-teal-600" />
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-medium text-slate-900">Artikel Bantuan</h4>

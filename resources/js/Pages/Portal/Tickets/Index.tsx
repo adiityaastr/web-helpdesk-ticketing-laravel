@@ -1,7 +1,9 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import React, { useEffect, useRef } from 'react';
 import PortalLayout from '../Layout';
-import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../../Utils/badges';
+import Icon from '@/Components/Icon';
+import FlashMessage from '@/Components/FlashMessage';
+import Badge from '@/Components/Badge';
 
 type TicketItem = {
     id: number;
@@ -42,9 +44,7 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
 
     return (
         <PortalLayout>
-            {flash.success && (
-                <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>
-            )}
+            <FlashMessage success={flash.success} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -52,14 +52,14 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                     <p className="text-sm text-slate-500">Kelola dan pantau status tiket Anda</p>
                 </div>
                 <Link href="/portal/tickets/create" className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>add</span>
+                    <Icon name="add" size={18} filled />
                     Buat Tiket Baru
                 </Link>
             </div>
 
             <div className="mb-4 flex flex-col gap-2 sm:flex-row">
                 <div className="relative flex-1">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" style={{ fontSize: '18px' }}>search</span>
+                    <Icon name="search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Cari tiket..."
@@ -74,7 +74,7 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                     onChange={(e) => updateFilter('status', e.target.value)}
                 >
                     <option value="">Semua Status</option>
-                    {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
+                    {statuses.map((s) => <option key={s} value={s}><Badge variant="status" value={s} /></option>)}
                 </select>
                 <select
                     className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
@@ -82,14 +82,14 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                     onChange={(e) => updateFilter('priority', e.target.value)}
                 >
                     <option value="">Semua Prioritas</option>
-                    {priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)}
+                    {priorities.map((p) => <option key={p} value={p}><Badge variant="priority" value={p} /></option>)}
                 </select>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                 {tickets.data.length === 0 ? (
                     <div className="px-5 py-12 text-center">
-                        <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>inbox</span>
+                        <Icon name="inbox" size={48} className="text-slate-300" />
                         <p className="mt-2 text-slate-400">Belum ada tiket.</p>
                         <Link href="/portal/tickets/create" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Buat Tiket</Link>
                     </div>
@@ -100,14 +100,14 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-mono text-xs text-slate-400">#{ticket.uuid?.slice(0, 8)}</span>
-                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(ticket.status)}`}>{statusLabel[ticket.status] ?? ticket.status}</span>
-                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(ticket.priority)}`}>{priorityLabel[ticket.priority] ?? ticket.priority}</span>
+                                        <Badge variant="status" value={ticket.status} />
+                                        <Badge variant="priority" value={ticket.priority} />
                                     </div>
                                     <h4 className="mt-1 truncate text-sm font-medium text-slate-900">{ticket.title}</h4>
                                     <p className="mt-0.5 text-xs text-slate-500">{ticket.category?.name ?? '-'} &middot; {ticket.assignee?.name ?? 'Belum ditugaskan'}</p>
                                 </div>
                                 <div className="text-right text-xs text-slate-400">{ticket.created_at ?? '-'}</div>
-                                <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '20px' }}>chevron_right</span>
+                                <Icon name="chevron_right" size={20} className="text-slate-300" />
                             </Link>
                         ))}
                     </div>

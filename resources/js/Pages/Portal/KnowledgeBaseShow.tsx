@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import PortalLayout from './Layout';
+import Icon from '@/Components/Icon';
 
 type Article = {
     id: number;
@@ -20,7 +21,7 @@ export default function KnowledgeBaseShow({ article }: Props) {
         <PortalLayout>
             <div className="mb-6">
                 <Link href="/portal/knowledge-base" className="inline-flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700">
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+                    <Icon name="arrow_back" size={18} />
                     Kembali ke Basis Pengetahuan
                 </Link>
             </div>
@@ -33,13 +34,13 @@ export default function KnowledgeBaseShow({ article }: Props) {
                 <div className="mb-6 flex items-center gap-3 text-xs text-slate-400">
                     {article.author && (
                         <span className="inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>person</span>
+                            <Icon name="person" size={14} />
                             {article.author.name}
                         </span>
                     )}
                     {article.created_at && (
                         <span className="inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>schedule</span>
+                            <Icon name="schedule" size={14} />
                             {article.created_at}
                         </span>
                     )}

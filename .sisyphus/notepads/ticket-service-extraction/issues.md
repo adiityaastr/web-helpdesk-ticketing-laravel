@@ -1,0 +1,2 @@
+- Issue: Tests rely on file uploads; ensure test environment supports UploadedFile::fake and storage copies.
+- Issue: Notification tests require staff users seeded with roles; ensure factories seed roles.

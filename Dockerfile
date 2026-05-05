@@ -18,7 +18,7 @@ RUN apk add --no-cache \
         bcmath \
         curl \
         zip \
-    && pecl install redis \
+    && pecl install redis-6.0.2 \
     && docker-php-ext-enable redis \
     && echo "opcache.enable=1" > /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/opcache.ini \

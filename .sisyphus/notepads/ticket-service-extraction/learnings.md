@@ -1,0 +1,6 @@
+- Plan: Extract TicketService from controllers (TDD) in Wave 2, Task 6.
+- Approach: Read Portal/Admin TicketControllers, design TicketService with methods: createTicket, updateTicket, cancelTicket, confirmResolution, rejectResolution, deleteTicket, getTicketDetail.
+- Key decisions:
+  - Notified all staff on Portal ticket creation (preserve existing behavior).
+  - Tests modeled as red → green → refactor, per TDD.
+- Risks: Ensuring test DB seeding for categories/users; file uploads in tests require UploadedFile::fake.

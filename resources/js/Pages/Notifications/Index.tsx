@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import AdminLayout from '../Admin/Layout';
 import PortalLayout from '../Portal/Layout';
+import Icon from '@/Components/Icon';
 
 type NotificationItem = {
     id: string;
@@ -17,27 +18,17 @@ type NotificationItem = {
 };
 
 type Props = {
-    notifications: {
-        data: NotificationItem[];
-    };
+    notifications: { data: NotificationItem[] };
 };
 
 const actionLabel: Record<string, string> = {
-    created: 'dibuat',
-    updated: 'diperbarui',
-    commented: 'dikomentari',
-    resolved: 'diselesaikan',
-    closed: 'ditutup',
-    cancelled: 'dibatalkan',
+    created: 'dibuat', updated: 'diperbarui', commented: 'dikomentari',
+    resolved: 'diselesaikan', closed: 'ditutup', cancelled: 'dibatalkan',
 };
 
 const actionIcon: Record<string, string> = {
-    created: 'add_circle',
-    updated: 'update',
-    commented: 'chat',
-    resolved: 'check_circle',
-    closed: 'lock',
-    cancelled: 'cancel',
+    created: 'add_circle', updated: 'update', commented: 'chat',
+    resolved: 'check_circle', closed: 'lock', cancelled: 'cancel',
 };
 
 export default function NotificationsIndex({ notifications }: Props) {
@@ -56,7 +47,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                     className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                     onClick={() => router.post('/notifications/read-all')}
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>done_all</span>
+                    <Icon name="done_all" size={18} />
                     Tandai semua dibaca
                 </button>
             </div>
@@ -64,7 +55,7 @@ export default function NotificationsIndex({ notifications }: Props) {
             <div className="space-y-2">
                 {notifications.data.length === 0 && (
                     <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
-                        <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '48px' }}>notifications_off</span>
+                        <Icon name="notifications_off" size={48} className="text-slate-300" />
                         <p className="mt-2 text-slate-400">Belum ada notifikasi.</p>
                     </div>
                 )}
@@ -72,7 +63,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                     <article key={item.id} className={`rounded-lg border p-4 ${item.read_at ? 'border-slate-200 bg-white' : 'border-teal-200 bg-teal-50'}`}>
                         <div className="mb-1 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '18px' }}>{actionIcon[item.data.action ?? 'update'] ?? 'update'}</span>
+                                <Icon name={actionIcon[item.data.action ?? 'update'] ?? 'update'} size={18} className="text-slate-400" />
                                 <p className="text-sm font-medium text-slate-900">{item.data.title ?? 'Aktivitas tiket'}</p>
                             </div>
                             <span className="text-xs text-slate-400">{item.created_at ?? '-'}</span>

@@ -54,3 +54,10 @@ composer-setup.php
 
 # Docker (override lokal)
 docker-compose.override.yml
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/.sisyphus/evidence/visual-baselines/

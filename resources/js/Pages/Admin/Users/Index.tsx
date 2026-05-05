@@ -1,6 +1,9 @@
 import React, { FormEvent, useState } from 'react';
 import { router, usePage, useForm } from '@inertiajs/react';
 import AdminLayout from '../Layout';
+import Icon from '@/Components/Icon';
+import FlashMessage from '@/Components/FlashMessage';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 type UserItem = {
     id: number;
@@ -30,11 +33,7 @@ const roleBadge = (role: string) => {
 const roleLabel: Record<string, string> = { staff: 'Staff IT', customer: 'Pengguna' };
 
 const positionBadge = (position: string) => {
-    const map: Record<string, string> = {
-        Manager: 'bg-teal-50 text-teal-700',
-        SPV: 'bg-blue-50 text-blue-700',
-        Staff: 'bg-slate-100 text-slate-600'
-    };
+    const map: Record<string, string> = { Manager: 'bg-teal-50 text-teal-700', SPV: 'bg-blue-50 text-blue-700', Staff: 'bg-slate-100 text-slate-600' };
     return map[position] ?? 'bg-slate-100 text-slate-600';
 };
 
@@ -43,27 +42,10 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState<UserItem | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<UserItem | null>(null);
 
-    const createForm = useForm({
-        employee_number: '',
-        name: '',
-        email: '',
-        phone: '',
-        position: '',
-        department_id: '',
-        password: '',
-        role: 'customer',
-    });
-
-    const editForm = useForm({
-        name: '',
-        email: '',
-        phone: '',
-        position: '',
-        department_id: '',
-        password: '',
-        role: 'customer',
-    });
+    const createForm = useForm({ employee_number: '', name: '', email: '', phone: '', position: '', department_id: '', password: '', role: 'customer' });
+    const editForm = useForm({ name: '', email: '', phone: '', position: '', department_id: '', password: '', role: 'customer' });
 
     const updateFilter = (key: string, value: string) => {
         router.get('/admin/users', { ...filters, [key]: value || undefined }, { preserveState: true });
@@ -73,11 +55,7 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
         setEditingUser(null);
         createForm.reset();
         const nip = String(Math.floor(10000000 + Math.random() * 90000000));
-        createForm.setData({
-            ...createForm.data,
-            employee_number: nip,
-            email: `${nip}@company.com`,
-        });
+        createForm.setData({ ...createForm.data, employee_number: nip, email: `${nip}@company.com` });
         setShowPassword(false);
         setShowModal(true);
     };
@@ -85,37 +63,24 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
     const openEdit = (user: UserItem) => {
         setEditingUser(user);
         const dept = departments.find(d => d.name === user.department);
-        editForm.setData({
-            name: user.name,
-            email: user.email,
-            phone: user.phone ?? '',
-            position: user.position ?? '',
-            department_id: dept ? String(dept.id) : '',
-            password: '',
-            role: user.roles[0] ?? 'customer',
-        });
+        editForm.setData({ name: user.name, email: user.email, phone: user.phone ?? '', position: user.position ?? '', department_id: dept ? String(dept.id) : '', password: '', role: user.roles[0] ?? 'customer' });
         setShowModal(true);
     };
 
     const submitCreate = (e: FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/users', {
-            onSuccess: () => { setShowModal(false); createForm.reset(); },
-        });
+        createForm.post('/admin/users', { onSuccess: () => { setShowModal(false); createForm.reset(); } });
     };
 
     const submitEdit = (e: FormEvent) => {
         e.preventDefault();
         if (!editingUser) return;
-        editForm.put(`/admin/users/${editingUser.id}`, {
-            onSuccess: () => { setShowModal(false); },
-        });
+        editForm.put(`/admin/users/${editingUser.id}`, { onSuccess: () => { setShowModal(false); } });
     };
 
     return (
         <AdminLayout>
-            {page.props.flash.success && <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{page.props.flash.success}</div>}
-            {page.props.flash.error && <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{page.props.flash.error}</div>}
+            <FlashMessage success={page.props.flash.success} error={page.props.flash.error} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -169,7 +134,7 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
                                     <div className="flex gap-3">
                                         <button onClick={() => openEdit(user)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
                                         {user.id !== page.props.auth.user?.id && (
-                                            <button onClick={() => { if (confirm('Yakin ingin menghapus?')) router.delete(`/admin/users/${user.id}`); }} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
+                                            <button onClick={() => setDeleteTarget(user)} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
                                         )}
                                     </div>
                                 </td>
@@ -225,7 +190,7 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
                                     <div className="relative">
                                         <input type={showPassword ? 'text' : 'password'} className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-teal-500 focus:outline-none" value={editForm.data.password} onChange={(e) => editForm.setData('password', e.target.value)} />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                            <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={18} />
                                         </button>
                                     </div>
                                     {editForm.errors.password && <p className="mt-1 text-xs text-rose-600">{editForm.errors.password}</p>}
@@ -282,7 +247,7 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
                                     <div className="relative">
                                         <input type={showPassword ? 'text' : 'password'} className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm focus:border-teal-500 focus:outline-none" value={createForm.data.password} onChange={(e) => createForm.setData('password', e.target.value)} />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showPassword ? 'visibility_off' : 'visibility'}</span>
+                                            <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={18} />
                                         </button>
                                     </div>
                                     {createForm.errors.password && <p className="mt-1 text-xs text-rose-600">{createForm.errors.password}</p>}
@@ -302,6 +267,16 @@ export default React.memo(function UserIndex({ users, filters, roles, positions,
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Pengguna"
+                message={`Yakin ingin menghapus pengguna "${deleteTarget?.name ?? ''}"?`}
+                confirmLabel="Hapus"
+                variant="danger"
+                onConfirm={() => { if (deleteTarget) router.delete(`/admin/users/${deleteTarget.id}`); setDeleteTarget(null); }}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </AdminLayout>
     );
 });
