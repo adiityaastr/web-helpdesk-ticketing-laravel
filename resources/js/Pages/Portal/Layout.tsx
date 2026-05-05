@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import AppShell from '../../Components/AppShell';
+import Icon from '@/Components/Icon';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
     const user = usePage<{ auth: { user: { name: string; email: string } }; notifications: { unread_count: number } }>().props.auth.user;
@@ -23,7 +24,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                     href="/portal/tickets/create"
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700"
                 >
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>add</span>
+                    <Icon name="add" size={18} filled />
                     Buat Tiket Baru
                 </Link>
             }

@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { router, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '../Layout';
+import FlashMessage from '@/Components/FlashMessage';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 type DepartmentItem = {
     id: number;
@@ -16,58 +18,33 @@ export default function DepartmentIndex({ departments }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
     const [showModal, setShowModal] = useState(false);
     const [editDepartment, setEditDepartment] = useState<DepartmentItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-    const createForm = useForm({
-        name: '',
-    });
+    const createForm = useForm({ name: '' });
+    const editForm = useForm({ name: '' });
 
-    const editForm = useForm({
-        name: '',
-    });
-
-    const openCreate = () => {
-        setEditDepartment(null);
-        createForm.reset();
-        setShowModal(true);
-    };
+    const openCreate = () => { setEditDepartment(null); createForm.reset(); setShowModal(true); };
 
     const openEdit = (department: DepartmentItem) => {
         setEditDepartment(department);
-        editForm.setData({
-            name: department.name,
-        });
+        editForm.setData({ name: department.name });
         setShowModal(true);
     };
 
     const submitCreate = (e: FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/departments', {
-            onSuccess: () => {
-                setShowModal(false);
-                createForm.reset();
-            },
-        });
+        createForm.post('/admin/departments', { onSuccess: () => { setShowModal(false); createForm.reset(); } });
     };
 
     const submitEdit = (e: FormEvent) => {
         e.preventDefault();
         if (!editDepartment) return;
-        editForm.put(`/admin/departments/${editDepartment.id}`, {
-            onSuccess: () => {
-                setShowModal(false);
-            },
-        });
-    };
-
-    const handleDelete = (id: number) => {
-        if (confirm('Yakin ingin menghapus departemen ini?')) {
-            router.delete(`/admin/departments/${id}`);
-        }
+        editForm.put(`/admin/departments/${editDepartment.id}`, { onSuccess: () => { setShowModal(false); } });
     };
 
     return (
         <AdminLayout>
-            {flash.success && <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>}
+            <FlashMessage success={flash.success} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -94,7 +71,7 @@ export default function DepartmentIndex({ departments }: Props) {
                                 <td className="px-5 py-3">
                                     <div className="flex gap-3">
                                         <button onClick={() => openEdit(department)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
-                                        <button onClick={() => handleDelete(department.id)} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
+                                        <button onClick={() => setDeleteTarget({ id: department.id, name: department.name })} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
                                     </div>
                                 </td>
                             </tr>
@@ -136,6 +113,16 @@ export default function DepartmentIndex({ departments }: Props) {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Departemen"
+                message={`Yakin ingin menghapus departemen "${deleteTarget?.name ?? ''}"?`}
+                confirmLabel="Hapus"
+                variant="danger"
+                onConfirm={() => { if (deleteTarget) router.delete(`/admin/departments/${deleteTarget.id}`); setDeleteTarget(null); }}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </AdminLayout>
     );
 }

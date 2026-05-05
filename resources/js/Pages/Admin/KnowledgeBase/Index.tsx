@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { router, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '../Layout';
+import FlashMessage from '@/Components/FlashMessage';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 type ArticleItem = {
     id: number;
@@ -24,67 +26,33 @@ export default function KnowledgeBaseIndex({ articles, categories }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
     const [showModal, setShowModal] = useState(false);
     const [editArticle, setEditArticle] = useState<ArticleItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
 
-    const createForm = useForm({
-        title: '',
-        content: '',
-        category_id: '',
-        is_published: false as boolean,
-    });
+    const createForm = useForm({ title: '', content: '', category_id: '', is_published: false as boolean });
+    const editForm = useForm({ title: '', content: '', category_id: '', is_published: false as boolean });
 
-    const editForm = useForm({
-        title: '',
-        content: '',
-        category_id: '',
-        is_published: false as boolean,
-    });
-
-    const openCreate = () => {
-        setEditArticle(null);
-        createForm.reset();
-        setShowModal(true);
-    };
+    const openCreate = () => { setEditArticle(null); createForm.reset(); setShowModal(true); };
 
     const openEdit = (article: ArticleItem) => {
         setEditArticle(article);
-        editForm.setData({
-            title: article.title,
-            content: article.content ?? '',
-            category_id: article.category?.id?.toString() ?? '',
-            is_published: article.is_published,
-        });
+        editForm.setData({ title: article.title, content: article.content ?? '', category_id: article.category?.id?.toString() ?? '', is_published: article.is_published });
         setShowModal(true);
     };
 
     const submitCreate = (e: FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/knowledge-base', {
-            onSuccess: () => {
-                setShowModal(false);
-                createForm.reset();
-            },
-        });
+        createForm.post('/admin/knowledge-base', { onSuccess: () => { setShowModal(false); createForm.reset(); } });
     };
 
     const submitEdit = (e: FormEvent) => {
         e.preventDefault();
         if (!editArticle) return;
-        editForm.put(`/admin/knowledge-base/${editArticle.id}`, {
-            onSuccess: () => {
-                setShowModal(false);
-            },
-        });
-    };
-
-    const handleDelete = (id: number) => {
-        if (confirm('Yakin ingin menghapus artikel ini?')) {
-            router.delete(`/admin/knowledge-base/${id}`);
-        }
+        editForm.put(`/admin/knowledge-base/${editArticle.id}`, { onSuccess: () => { setShowModal(false); } });
     };
 
     return (
         <AdminLayout>
-            {flash.success && <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>}
+            <FlashMessage success={flash.success} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -119,7 +87,7 @@ export default function KnowledgeBaseIndex({ articles, categories }: Props) {
                                 <td className="px-5 py-3">
                                     <div className="flex gap-3">
                                         <button onClick={() => openEdit(article)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
-                                        <button onClick={() => handleDelete(article.id)} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
+                                        <button onClick={() => setDeleteTarget({ id: article.id, title: article.title })} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
                                     </div>
                                 </td>
                             </tr>
@@ -193,6 +161,16 @@ export default function KnowledgeBaseIndex({ articles, categories }: Props) {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Artikel"
+                message={`Yakin ingin menghapus artikel "${deleteTarget?.title ?? ''}"?`}
+                confirmLabel="Hapus"
+                variant="danger"
+                onConfirm={() => { if (deleteTarget) router.delete(`/admin/knowledge-base/${deleteTarget.id}`); setDeleteTarget(null); }}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </AdminLayout>
     );
 }

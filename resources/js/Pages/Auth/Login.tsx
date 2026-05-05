@@ -1,5 +1,6 @@
 import { FormEvent } from 'react';
 import { Link, useForm } from '@inertiajs/react';
+import Icon from '@/Components/Icon';
 
 export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
@@ -18,7 +19,7 @@ export default function Login() {
             <div className="w-full max-w-sm">
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600">
-                        <span className="material-symbols-outlined text-white" style={{ fontSize: '22px' }}>support_agent</span>
+                        <Icon name="support_agent" size={22} className="text-white" />
                     </div>
                     <h1 className="text-lg font-semibold text-slate-900">Helpdesk Ticketing</h1>
                     <p className="mt-1 text-sm text-slate-500">Masuk ke akun Anda</p>

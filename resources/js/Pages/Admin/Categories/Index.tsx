@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { router, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '../Layout';
+import FlashMessage from '@/Components/FlashMessage';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 type CategoryItem = {
     id: number;
@@ -18,61 +20,33 @@ export default function CategoryIndex({ categories }: Props) {
     const { flash } = usePage<{ flash: { success?: string } }>().props;
     const [showModal, setShowModal] = useState(false);
     const [editCategory, setEditCategory] = useState<CategoryItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
-    const createForm = useForm({
-        name: '',
-        description: '',
-    });
+    const createForm = useForm({ name: '', description: '' });
+    const editForm = useForm({ name: '', description: '' });
 
-    const editForm = useForm({
-        name: '',
-        description: '',
-    });
-
-    const openCreate = () => {
-        setEditCategory(null);
-        createForm.reset();
-        setShowModal(true);
-    };
+    const openCreate = () => { setEditCategory(null); createForm.reset(); setShowModal(true); };
 
     const openEdit = (category: CategoryItem) => {
         setEditCategory(category);
-        editForm.setData({
-            name: category.name,
-            description: category.description ?? '',
-        });
+        editForm.setData({ name: category.name, description: category.description ?? '' });
         setShowModal(true);
     };
 
     const submitCreate = (e: FormEvent) => {
         e.preventDefault();
-        createForm.post('/admin/categories', {
-            onSuccess: () => {
-                setShowModal(false);
-                createForm.reset();
-            },
-        });
+        createForm.post('/admin/categories', { onSuccess: () => { setShowModal(false); createForm.reset(); } });
     };
 
     const submitEdit = (e: FormEvent) => {
         e.preventDefault();
         if (!editCategory) return;
-        editForm.put(`/admin/categories/${editCategory.id}`, {
-            onSuccess: () => {
-                setShowModal(false);
-            },
-        });
-    };
-
-    const handleDelete = (id: number) => {
-        if (confirm('Yakin ingin menghapus kategori ini?')) {
-            router.delete(`/admin/categories/${id}`);
-        }
+        editForm.put(`/admin/categories/${editCategory.id}`, { onSuccess: () => { setShowModal(false); } });
     };
 
     return (
         <AdminLayout>
-            {flash.success && <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{flash.success}</div>}
+            <FlashMessage success={flash.success} />
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -103,7 +77,7 @@ export default function CategoryIndex({ categories }: Props) {
                                 <td className="px-5 py-3">
                                     <div className="flex gap-3">
                                         <button onClick={() => openEdit(category)} className="text-sm text-teal-600 hover:text-teal-700">Edit</button>
-                                        <button onClick={() => handleDelete(category.id)} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
+                                        <button onClick={() => setDeleteTarget({ id: category.id, name: category.name })} className="text-sm text-rose-600 hover:text-rose-700">Hapus</button>
                                     </div>
                                 </td>
                             </tr>
@@ -153,6 +127,16 @@ export default function CategoryIndex({ categories }: Props) {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Hapus Kategori"
+                message={`Yakin ingin menghapus kategori "${deleteTarget?.name ?? ''}"?`}
+                confirmLabel="Hapus"
+                variant="danger"
+                onConfirm={() => { if (deleteTarget) router.delete(`/admin/categories/${deleteTarget.id}`); setDeleteTarget(null); }}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </AdminLayout>
     );
 }

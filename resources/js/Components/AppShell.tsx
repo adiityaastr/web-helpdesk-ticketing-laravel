@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import Icon from '@/Components/Icon';
 
 export type NavItem = {
     href: string;
@@ -51,7 +52,7 @@ export default function AppShell({ navItems, actions, user, unreadCount, childre
                 {/* Sidebar Header */}
                 <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-6">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600">
-                        <span className="material-symbols-outlined text-white" style={{ fontSize: '22px' }}>support_agent</span>
+                        <Icon name="support_agent" size={22} className="text-white" />
                     </div>
                     {variant === 'admin' ? (
                         <div>
@@ -76,12 +77,12 @@ export default function AppShell({ navItems, actions, user, unreadCount, childre
                                 item.active ? s.navActive : s.navInactive
                             }`}
                         >
-                            <span
-                                className={`material-symbols-outlined ${item.active ? s.iconActive : s.iconInactive}`}
-                                style={{ fontSize: '20px', ...(item.active ? { fontVariationSettings: "'FILL' 1" } : {}) }}
-                            >
-                                {item.icon}
-                            </span>
+                            <Icon
+                                name={item.icon}
+                                size={20}
+                                filled={item.active}
+                                className={item.active ? s.iconActive : s.iconInactive}
+                            />
                             {item.label}
                         </Link>
                     ))}
@@ -108,7 +109,7 @@ export default function AppShell({ navItems, actions, user, unreadCount, childre
                                 <p className="truncate text-[10px] text-slate-500">{user.email}</p>
                             )}
                         </div>
-                        <span className="material-symbols-outlined ml-auto text-slate-400" style={{ fontSize: '18px' }}>logout</span>
+                        <Icon name="logout" size={18} className="ml-auto text-slate-400" />
                     </div>
                 </div>
             </aside>
@@ -126,11 +127,11 @@ export default function AppShell({ navItems, actions, user, unreadCount, childre
                         className="rounded-lg p-2 text-slate-500 hover:bg-slate-50 lg:hidden"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                     >
-                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>menu</span>
+                        <Icon name="menu" size={20} />
                     </button>
 
                     <div className="hidden h-9 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 lg:flex lg:max-w-sm">
-                        <span className="material-symbols-outlined text-slate-400" style={{ fontSize: '18px' }}>search</span>
+                        <Icon name="search" size={18} className="text-slate-400" />
                         <input
                             type="text"
                             placeholder={s.searchPlaceholder}
@@ -140,7 +141,7 @@ export default function AppShell({ navItems, actions, user, unreadCount, childre
 
                     <div className="flex items-center gap-2">
                         <Link href="/notifications" className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-50">
-                            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>notifications</span>
+                            <Icon name="notifications" size={20} />
                             {unreadCount > 0 && (
                                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white">{unreadCount}</span>
                             )}

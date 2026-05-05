@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import React, { Suspense } from 'react';
 import AdminLayout from './Layout';
-import { statusBadge, priorityBadge, statusLabel, priorityLabel } from '../../Utils/badges';
+import Badge from '@/Components/Badge';
 
 const Doughnut = React.lazy(() => import('react-chartjs-2').then(async (mod) => {
     const { ArcElement, Chart, Tooltip, Legend } = await import('chart.js');
@@ -21,41 +21,18 @@ type TicketSummary = {
     created_at: string | null;
 };
 
-type StaffWorkload = {
-    id: number;
-    name: string;
-    assigned_count: number;
-};
+type StaffWorkload = { id: number; name: string; assigned_count: number };
 
 type Props = {
-    stats: {
-        total: number;
-        open: number;
-        in_progress: number;
-        resolved: number;
-        closed: number;
-        overdue: number;
-    };
+    stats: { total: number; open: number; in_progress: number; resolved: number; closed: number; overdue: number };
     priorityChart: { labels: string[]; values: number[] };
     statusChart: { labels: string[]; values: number[] };
     recentTickets: TicketSummary[];
     staffWorkload: StaffWorkload[];
 };
 
-const statusColors: Record<string, string> = {
-    open: '#3b82f6',
-    in_progress: '#f59e0b',
-    resolved: '#10b981',
-    closed: '#64748b',
-    cancelled: '#f43f5e',
-};
-
-const priorityColors: Record<string, string> = {
-    critical: '#ef4444',
-    high: '#f97316',
-    medium: '#eab308',
-    low: '#22c55e',
-};
+const statusColors: Record<string, string> = { open: '#3b82f6', in_progress: '#f59e0b', resolved: '#10b981', closed: '#64748b', cancelled: '#f43f5e' };
+const priorityColors: Record<string, string> = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#22c55e' };
 
 export default React.memo(function AdminDashboard({ stats, priorityChart, statusChart, recentTickets, staffWorkload }: Props) {
     return (
@@ -99,7 +76,7 @@ export default React.memo(function AdminDashboard({ stats, priorityChart, status
                         <Suspense fallback={<div className="h-48 flex items-center justify-center text-slate-400 text-sm">Loading chart...</div>}>
                             <Doughnut
                                 data={{
-                                    labels: statusChart.labels.map((l) => statusLabel[l] ?? l),
+                                    labels: statusChart.labels.map((l) => l),
                                     datasets: [{ data: statusChart.values, backgroundColor: statusChart.labels.map((l) => statusColors[l] ?? '#94a3b8') }],
                                 }}
                                 options={{ plugins: { legend: { position: 'bottom' } } }}
@@ -114,7 +91,7 @@ export default React.memo(function AdminDashboard({ stats, priorityChart, status
                         <Suspense fallback={<div className="h-48 flex items-center justify-center text-slate-400 text-sm">Loading chart...</div>}>
                             <Doughnut
                                 data={{
-                                    labels: priorityChart.labels.map((l) => priorityLabel[l] ?? l),
+                                    labels: priorityChart.labels.map((l) => l),
                                     datasets: [{ data: priorityChart.values, backgroundColor: priorityChart.labels.map((l) => priorityColors[l] ?? '#94a3b8') }],
                                 }}
                                 options={{ plugins: { legend: { position: 'bottom' } } }}
@@ -146,8 +123,8 @@ export default React.memo(function AdminDashboard({ stats, priorityChart, status
                                         <td className="px-5 py-3">
                                             <Link href={`/admin/tickets/${t.id}`} className="font-medium text-slate-900 hover:underline">{t.title}</Link>
                                         </td>
-                                        <td className="px-5 py-3"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${priorityBadge(t.priority)}`}>{priorityLabel[t.priority] ?? t.priority}</span></td>
-                                        <td className="px-5 py-3"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusBadge(t.status)}`}>{statusLabel[t.status] ?? t.status}</span></td>
+                                        <td className="px-5 py-3"><Badge variant="priority" value={t.priority} /></td>
+                                        <td className="px-5 py-3"><Badge variant="status" value={t.status} /></td>
                                         <td className="px-5 py-3 text-slate-500">{t.assignee ?? 'Belum'}</td>
                                     </tr>
                                 ))}
