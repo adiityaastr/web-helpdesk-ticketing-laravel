@@ -1,5 +1,6 @@
 import React, { FormEvent, useRef, useState, useCallback, useEffect } from 'react';
 import { priorityLabel } from '../Utils/badges';
+import Icon from '@/Components/Icon';
 
 export type Category = { id: number; name: string; slug: string };
 
@@ -229,12 +230,12 @@ export default React.memo(function TicketForm({
                             disabled={data.attachments.length >= MAX_ATTACHMENTS}
                             className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>photo_camera</span>
+                            <Icon name="photo_camera" size={18} />
                             Ambil Foto
                         </button>
 
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>attach_file</span>
+                            <Icon name="attach_file" size={18} />
                             Pilih File
                             <input
                                 type="file"
@@ -256,7 +257,7 @@ export default React.memo(function TicketForm({
                                         <img src={previews[i]} alt={file.name} className="h-24 w-full object-cover" />
                                     ) : (
                                         <div className="flex h-24 w-full items-center justify-center bg-slate-50">
-                                            <span className="material-symbols-outlined text-slate-300" style={{ fontSize: '32px' }}>description</span>
+                                            <Icon name="description" size={32} className="text-slate-300" />
                                         </div>
                                     )}
                                     <button
@@ -264,7 +265,7 @@ export default React.memo(function TicketForm({
                                         onClick={() => removeAttachment(i)}
                                         className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white opacity-0 transition group-hover:opacity-100"
                                     >
-                                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+                                        <Icon name="close" size={14} className="text-white" />
                                     </button>
                                     <p className="truncate px-1 py-0.5 text-[10px] text-slate-400">{file.name}</p>
                                 </div>
@@ -322,7 +323,7 @@ export default React.memo(function TicketForm({
                             onClick={switchCamera}
                             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>cameraswitch</span>
+                            <Icon name="cameraswitch" size={24} className="text-white" />
                         </button>
                         <button
                             type="button"
@@ -336,7 +337,7 @@ export default React.memo(function TicketForm({
                             onClick={closeCamera}
                             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30"
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>close</span>
+                            <Icon name="close" size={24} className="text-white" />
                         </button>
                     </div>
                 </div>
@@ -345,7 +346,7 @@ export default React.memo(function TicketForm({
             {toast && (
                 <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 animate-[fadeUp_0.3s_ease-out] rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-emerald-400" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        <Icon name="check_circle" size={18} filled className="text-emerald-400" />
                         {toast}
                     </div>
                 </div>

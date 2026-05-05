@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '@/Components/Icon';
 
 type RatingStarsProps = {
   rating: number;
@@ -24,16 +25,17 @@ export default function RatingStars({
       {Array.from({ length: max }, (_, i) => {
         const star = i + 1;
         const filled = displayRating >= star;
+        const colorClass = filled ? 'text-amber-400' : 'text-slate-300';
 
         if (readOnly) {
           return (
-            <span
+            <Icon
               key={star}
-              className={`material-symbols-outlined ${filled ? 'text-amber-400' : 'text-slate-300'}`}
-              style={{ fontSize: `${size}px`, ...(filled ? { fontVariationSettings: "'FILL' 1" } : {}) }}
-            >
-              star
-            </span>
+              name="star"
+              size={size}
+              filled={filled}
+              className={colorClass}
+            />
           );
         }
 
@@ -46,12 +48,12 @@ export default function RatingStars({
             onMouseEnter={() => setHoverRating(star)}
             onMouseLeave={() => setHoverRating(0)}
           >
-            <span
-              className={`material-symbols-outlined ${filled ? 'text-amber-400' : 'text-slate-300'}`}
-              style={{ fontSize: `${size}px`, ...(filled ? { fontVariationSettings: "'FILL' 1" } : {}) }}
-            >
-              star
-            </span>
+            <Icon
+              name="star"
+              size={size}
+              filled={filled}
+              className={colorClass}
+            />
           </button>
         );
       })}

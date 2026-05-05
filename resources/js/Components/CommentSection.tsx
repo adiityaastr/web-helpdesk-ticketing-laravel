@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
+import Icon from '@/Components/Icon';
 
 export type Comment = {
     id: number;
@@ -75,7 +76,7 @@ export default function CommentSection({
 
             {isLocked ? (
                 <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    <span className="material-symbols-outlined align-middle mr-1" style={{ fontSize: '16px' }}>lock</span>
+                    <Icon name="lock" size={16} className="align-middle mr-1" />
                     Kolom komentar ditutup — tiket sudah selesai.
                     <p className="mt-1 text-xs text-slate-400">
                         Jika kendala belum terselesaikan, silakan buat{' '}
@@ -148,7 +149,7 @@ export default function CommentSection({
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1 text-xs text-teal-600 hover:underline"
                                     >
-                                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>attachment</span>
+                                        <Icon name="attachment" size={14} />
                                         Lampiran {i + 1}
                                     </a>
                                 ))}
