@@ -1,0 +1,111 @@
+@startuml Activity Diagram — Autentikasi
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam activityBackgroundColor #E3F2FD
+skinparam activityBorderColor #1565C0
+skinparam activityDiamondBackgroundColor #FFF9C4
+skinparam activityDiamondBorderColor #F9A825
+skinparam activityStartColor #4CAF50
+skinparam activityEndColor #EF5350
+skinparam activityBarColor #BBDEFB
+
+title Alur Autentikasi — Login & Register\n
+
+' ============================================================
+' FLOW LOGIN
+' ============================================================
+
+|User|
+start
+:Akses halaman login (/login);
+
+|Sistem (Laravel)|
+:Tampilkan form login\n(email, password);
+
+|User|
+:Input email & password;
+:Submit form login;
+
+|Sistem (Laravel)|
+:Validasi input\n(email required, password required);
+
+if (Input valid?) then (Tidak)
+    :Tampilkan pesan error\nvalidasi;
+    |User|
+    stop
+else (Ya)
+endif
+
+:Query user berdasarkan email;
+
+|Database|
+:Return data user\n(id, name, email, password, role);
+
+|Sistem (Laravel)|
+if (User ditemukan?) then (Tidak)
+    :Tampilkan error\n"Email atau password salah";
+    detach
+else (Ya)
+endif
+
+:Verifikasi password\n(bcrypt check);
+
+if (Password valid?) then (Tidak)
+    :Tampilkan error\n"Email atau password salah";
+    detach
+else (Ya)
+endif
+
+:Generate session\ndan login user;
+
+if (Role user?) then (staff / admin)
+    :Redirect ke\n/admin/dashboard;
+else (customer)
+    :Redirect ke\n/portal/dashboard;
+endif
+
+|User|
+#C8E6C9:Login berhasil;
+stop
+
+' ============================================================
+' FLOW REGISTER
+' ============================================================
+
+|User|
+:Akses halaman register (/register);
+
+|Sistem (Laravel)|
+:Tampilkan form register\n(nama, email, password, phone, department);
+
+|User|
+:Isi data registrasi\n(nama, email, password, phone, department);
+:Submit form register;
+
+|Sistem (Laravel)|
+:Validasi input\n(unique email, required fields);
+
+if (Input valid?) then (Tidak)
+    :Tampilkan pesan error\nvalidasi;
+    |User|
+    stop
+else (Ya)
+endif
+
+:Create user di database;
+:Assign role "customer";
+
+|Database|
+:Simpan data user baru;
+
+|Sistem (Laravel)|
+:Auto-login user baru;
+:Redirect ke\n/portal/dashboard;
+
+|User|
+#C8E6C9:Registrasi berhasil;
+stop
+
+@enduml

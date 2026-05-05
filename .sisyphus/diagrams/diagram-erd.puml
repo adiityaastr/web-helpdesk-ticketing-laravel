@@ -1,0 +1,154 @@
+@startuml Entity Relationship Diagram — Helpdesk Ticketing
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam entityBackgroundColor #E3F2FD
+skinparam entityBorderColor #1565C0
+skinparam entityFontStyle bold
+skinparam legendBackgroundColor #F5F5F5
+
+title Entity Relationship Diagram — Sistem Helpdesk Ticketing\n
+
+entity "users" as users {
+    * **id** : BIGINT <<PK>>
+    --
+    * **name** : VARCHAR
+    * **email** : VARCHAR <<UK>>
+    email_verified_at : TIMESTAMP
+    * **password** : VARCHAR
+    phone : VARCHAR
+    department : VARCHAR
+    employee_number : VARCHAR <<UK>>
+    position : VARCHAR
+    **department_id** : BIGINT <<FK>>
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "tickets" as tickets {
+    * **id** : BIGINT <<PK>>
+    --
+    * **uuid** : VARCHAR <<UK>>
+    **user_id** : BIGINT <<FK>>
+    **category_id** : BIGINT <<FK>>
+    * **title** : VARCHAR
+    * **description** : TEXT
+    * **priority** : ENUM (low, medium, high, critical)
+    * **status** : ENUM (open, in_progress, resolved, closed, cancelled)
+    **assigned_to** : BIGINT <<FK>>
+    sla_deadline : TIMESTAMP
+    resolved_at : TIMESTAMP
+    resolved_confirmed_at : TIMESTAMP
+    cancelled_at : TIMESTAMP
+    rating : TINYINT
+    rating_comment : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "comments" as comments {
+    * **id** : BIGINT <<PK>>
+    --
+    **ticket_id** : BIGINT <<FK>>
+    **user_id** : BIGINT <<FK>>
+    * **message** : TEXT
+    is_internal : BOOLEAN
+    attachments : JSON
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "categories" as categories {
+    * **id** : BIGINT <<PK>>
+    --
+    * **name** : VARCHAR
+    * **slug** : VARCHAR <<UK>>
+    description : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "departments" as departments {
+    * **id** : BIGINT <<PK>>
+    --
+    * **name** : VARCHAR
+    * **slug** : VARCHAR <<UK>>
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "knowledge_bases" as knowledge_bases {
+    * **id** : BIGINT <<PK>>
+    --
+    * **title** : VARCHAR
+    * **slug** : VARCHAR <<UK>>
+    * **content** : TEXT
+    **category_id** : BIGINT <<FK>>
+    **author_id** : BIGINT <<FK>>
+    is_published : BOOLEAN
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "activity_logs" as activity_logs {
+    * **id** : BIGINT <<PK>>
+    --
+    **user_id** : BIGINT <<FK>>
+    **ticket_id** : BIGINT <<FK>>
+    * **action** : VARCHAR
+    description : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "notifications" as notifications {
+    * **id** : UUID <<PK>>
+    --
+    * **type** : VARCHAR
+    * **notifiable_type** : VARCHAR
+    * **notifiable_id** : BIGINT
+    * **data** : JSON
+    read_at : TIMESTAMP
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "saw_configurations" as saw_configurations {
+    * **id** : BIGINT <<PK>>
+    --
+    * **code** : VARCHAR <<UK>>
+    * **name** : VARCHAR
+    * **type** : ENUM (benefit, cost)
+    weight : DECIMAL
+    sort_order : INT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+' === RELASI ===
+
+users ||--o{ tickets : "melaporkan (user_id)"
+users ||--o{ tickets : "ditugaskan (assigned_to)"
+users ||--o{ comments : "menulis"
+users ||--o{ activity_logs : "melakukan"
+users ||--o{ knowledge_bases : "menulis (author_id)"
+users ||--o{ notifications : "notifikasi via\npolymorphic notifiable"
+
+categories ||--o{ tickets : "mengkategorikan"
+categories ||--o{ knowledge_bases : "mengkategorikan"
+
+tickets ||--o{ comments : "memiliki"
+tickets ||--o{ activity_logs : "mencatat aktivitas"
+
+departments ||--o{ users : "memiliki anggota"
+
+legend bottom right
+  |= Keterangan |
+  | <<PK>> Primary Key |
+  | <<FK>> Foreign Key |
+  | <<UK>> Unique Key |
+  | * **bold** — Required / NOT NULL |
+endlegend
+
+@enduml

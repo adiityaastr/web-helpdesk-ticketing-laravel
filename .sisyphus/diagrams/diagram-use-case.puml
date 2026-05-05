@@ -1,0 +1,95 @@
+@startuml Use Case Diagram — Sistem Helpdesk Ticketing
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam usecaseBackgroundColor #E3F2FD
+skinparam usecaseBorderColor #1565C0
+skinparam usecaseFontStyle bold
+skinparam actorBackgroundColor #FFF3E0
+skinparam actorBorderColor #E65100
+
+left to right direction
+
+actor "Customer" as Cust
+actor "Staff / Admin" as Staff
+
+rectangle "Sistem Helpdesk Ticketing" #F5F5F5 {
+    ' --- Customer Use Cases ---
+    usecase "Register" as UC_Reg
+    usecase "Login" as UC_Login
+
+    usecase "Lihat Dashboard Portal" as UC_DashPortal
+    usecase "Buat Tiket Baru" as UC_CreateTicket
+    usecase "Lihat Daftar Tiket Saya" as UC_MyTickets
+
+    usecase "Lihat Detail Tiket" as UC_ViewDetail
+    usecase "Tambah Komentar" as UC_AddComment
+
+    usecase "Batalkan Tiket" as UC_Cancel
+    usecase "Konfirmasi Resolusi" as UC_Confirm
+    usecase "Tolak Resolusi" as UC_Reject
+    usecase "Beri Rating Tiket" as UC_Rate
+
+    usecase "Lihat Knowledge Base" as UC_ViewKB
+
+    usecase "Lihat Notifikasi" as UC_ViewNotif
+    usecase "Tandai Notifikasi Dibaca" as UC_MarkNotif
+
+    ' --- Staff/Admin Use Cases ---
+    usecase "Lihat Dashboard Admin\n(prioritas SAW)" as UC_DashAdmin
+    usecase "Lihat Semua Tiket" as UC_AllTickets
+    usecase "Update Tiket\n(status, prioritas, assignee)" as UC_UpdateTicket
+
+    usecase "Tambah Komentar\n(internal / public)" as UC_AddCommentStaff
+    usecase "Hapus Tiket" as UC_DeleteTicket
+
+    usecase "Kelola User\n(CRUD + role assignment)" as UC_ManageUser
+    usecase "Kelola Kategori Tiket" as UC_ManageCategory
+    usecase "Kelola Knowledge Base" as UC_ManageKB
+    usecase "Kelola Departemen" as UC_ManageDept
+
+    ' --- Customer associations ---
+    Cust --> UC_Reg
+    Cust --> UC_Login
+    Cust --> UC_DashPortal
+    Cust --> UC_CreateTicket
+    Cust --> UC_MyTickets
+    Cust --> UC_ViewDetail
+    Cust --> UC_AddComment
+    Cust --> UC_Cancel
+    Cust --> UC_Confirm
+    Cust --> UC_Reject
+    Cust --> UC_Rate
+    Cust --> UC_ViewKB
+    Cust --> UC_ViewNotif
+    Cust --> UC_MarkNotif
+
+    ' --- Staff/Admin associations ---
+    Staff --> UC_Login
+    Staff --> UC_DashAdmin
+    Staff --> UC_AllTickets
+    Staff --> UC_UpdateTicket
+    Staff --> UC_AddCommentStaff
+    Staff --> UC_DeleteTicket
+    Staff --> UC_ManageUser
+    Staff --> UC_ManageCategory
+    Staff --> UC_ManageKB
+    Staff --> UC_ManageDept
+    Staff --> UC_ViewNotif
+    Staff --> UC_MarkNotif
+
+    ' --- Shared ---
+    Staff --> UC_ViewDetail
+    Staff --> UC_AddComment
+
+    ' --- Dependencies ---
+    UC_Confirm ..> UC_ViewDetail : <<extend>>
+    UC_Reject ..> UC_ViewDetail : <<extend>>
+    UC_Rate ..> UC_ViewDetail : <<extend>>
+    UC_AddComment ..> UC_ViewDetail : <<include>>
+    UC_AddCommentStaff ..> UC_ViewDetail : <<include>>
+    UC_MarkNotif ..> UC_ViewNotif : <<extend>>
+}
+
+@enduml

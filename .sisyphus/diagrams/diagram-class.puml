@@ -1,0 +1,201 @@
+@startuml Class Diagram — Service Layer
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam classBackgroundColor #E3F2FD
+skinparam classBorderColor #1565C0
+skinparam classFontStyle bold
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageBorderColor #9E9E9E
+
+title Class Diagram — Service Layer Helpdesk Ticketing\n
+
+package "Services" #E8F5E9 {
+
+    class TicketService {
+        + createTicket(data): Ticket
+        + updateTicket(ticket, data): Ticket
+        + cancelTicket(ticket, reason): Ticket
+        + confirmResolution(ticket): Ticket
+        + rejectResolution(ticket, reason): Ticket
+        + deleteTicket(ticket): void
+        + getTicketDetail(ticket): Ticket
+        + rateTicket(ticket, rating, comment): Ticket
+        + getUserTickets(user): Collection
+        + getAllTickets(filters): Collection
+    }
+
+    class CommentService {
+        + addComment(ticket, user, message, isInternal): Comment
+        + addCommentWithAttachments(ticket, user, message, files): Comment
+        + isCommentLocked(ticket): bool
+    }
+
+    class NotificationService {
+        + notifyTicketUpdate(ticket, action, comment, notifyAllStaff): void
+    }
+
+    class DashboardService {
+        + getAdminStats(): array
+        + getAdminCharts(): array
+        + getRecentTickets(): Collection
+        + getStaffWorkload(): array
+        + getPortalStats(user): array
+        + invalidateDashboardCache(): void
+    }
+
+    class SawService {
+        + calculateScores(): array
+        + getScores(): array
+        + invalidateCache(): void
+        + seedDefaults(): void
+    }
+
+}
+
+package "Models" #FFF3E0 {
+
+    class Ticket {
+        + id: BIGINT
+        + uuid: VARCHAR
+        + title: VARCHAR
+        + description: TEXT
+        + priority: ENUM
+        + status: ENUM
+        + sla_deadline: TIMESTAMP
+        + rating: TINYINT
+        --
+        + reporter(): BelongsTo (User)
+        + assignee(): BelongsTo (User)
+        + category(): BelongsTo (Category)
+        + comments(): HasMany (Comment)
+        + activityLogs(): HasMany (ActivityLog)
+    }
+
+    class User {
+        + id: BIGINT
+        + name: VARCHAR
+        + email: VARCHAR
+        + password: VARCHAR
+        --
+        + reportedTickets(): HasMany (Ticket)
+        + assignedTickets(): HasMany (Ticket)
+        + comments(): HasMany (Comment)
+        + dept(): BelongsTo (Department)
+    }
+
+    class Comment {
+        + id: BIGINT
+        + ticket_id: BIGINT
+        + user_id: BIGINT
+        + message: TEXT
+        + is_internal: BOOLEAN
+        + attachments: JSON
+    }
+
+    class Category {
+        + id: BIGINT
+        + name: VARCHAR
+        + slug: VARCHAR
+    }
+
+    class ActivityLog {
+        + id: BIGINT
+        + ticket_id: BIGINT
+        + user_id: BIGINT
+        + action: VARCHAR
+        + description: TEXT
+    }
+
+    class SawConfiguration {
+        + id: BIGINT
+        + code: VARCHAR
+        + name: VARCHAR
+        + type: ENUM
+        + weight: DECIMAL
+        + sort_order: INT
+    }
+
+    class Notification {
+        + id: UUID
+        + type: VARCHAR
+        + notifiable_type: VARCHAR
+        + notifiable_id: BIGINT
+        + data: JSON
+        + read_at: TIMESTAMP
+    }
+
+}
+
+package "Controllers" #E3F2FD {
+
+    class PortalTicketController <<Controller>> {
+        + store(StoreTicketRequest)
+        + index()
+        + show(ticket)
+        + cancel(ticket)
+        + confirmResolve(ticket)
+        + rejectResolve(ticket)
+        + rate(ticket)
+    }
+
+    class AdminTicketController <<Controller>> {
+        + update(UpdateTicketRequest, ticket)
+        + destroy(ticket)
+        + index()
+    }
+
+}
+
+' ===== Dependencies from Services to Models =====
+
+TicketService --> Ticket : uses
+TicketService --> Comment : uses
+TicketService --> ActivityLog : uses
+TicketService --> SawService : uses
+
+CommentService --> Comment : manages
+
+NotificationService --> User : queries recipients
+NotificationService --> Ticket : references
+NotificationService --> Notification : creates
+
+DashboardService --> Ticket : aggregates
+
+SawService --> Ticket : queries
+SawService --> SawConfiguration : reads weight
+SawService --> User : queries staff
+
+' ===== Model Relationships =====
+
+User "1" -- "0..*" Ticket : reportedTickets\n(user_id)
+User "1" -- "0..*" Ticket : assignedTickets\n(assigned_to)
+Ticket "1" -- "0..*" Comment : comments
+Ticket "1" -- "0..*" ActivityLog : activityLogs
+User "1" -- "0..*" Comment : comments
+User "1" -- "0..*" ActivityLog : activityLogs
+Category "1" -- "0..*" Ticket : tickets
+Category "1" -- "0..*" KnowledgeBase : knowledgeBases
+User "1" -- "0..*" KnowledgeBase : authored
+
+' ===== Controller Dependencies =====
+
+PortalTicketController ..> TicketService : delegates
+AdminTicketController ..> TicketService : delegates
+
+note right of TicketService
+  Service sentral untuk semua
+  operasi terkait tiket.
+  Bergantung pada SawService
+  untuk perhitungan prioritas.
+end note
+
+note bottom of SawService
+  Menggunakan metode SAW
+  (Simple Additive Weighting)
+  untuk menghitung skor
+  prioritas tiket.
+end note
+
+@enduml

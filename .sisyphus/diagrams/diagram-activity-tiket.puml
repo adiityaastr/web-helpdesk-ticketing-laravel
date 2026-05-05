@@ -1,0 +1,71 @@
+@startuml Activity Diagram — Alur Tiket
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam activityBackgroundColor #E3F2FD
+skinparam activityBorderColor #1565C0
+skinparam activityDiamondBackgroundColor #FFF9C4
+skinparam activityDiamondBorderColor #F9A825
+skinparam activityStartColor #4CAF50
+skinparam activityEndColor #EF5350
+skinparam activityBarColor #BBDEFB
+
+title Alur Proses Tiket Helpdesk\n
+
+|Customer|
+start
+:Membuat tiket baru;
+:Isi judul, deskripsi, kategori, prioritas\ndan lampiran;
+:Submit form tiket;
+
+|Staff|
+:Melihat daftar tiket\ndengan prioritas SAW;
+:Mengambil tiket\ndan menetapkan assignee;
+
+:Status = "in_progress";
+
+repeat
+    :Memproses tiket\ndan menyelesaikan masalah;
+    :Mengubah status\ntiket ke "resolved";
+|Customer|
+    :Menerima notifikasi\nresolusi tiket;
+    :Mengecek hasil\nresolusi;
+
+    if (Hasil memuaskan?) then (Ya)
+        :Konfirmasi resolusi;
+        |Staff|
+        :Status = "closed";
+        #C8E6C9:Status final:\nTIKET SELESAI;
+        detach
+    else (Tidak)
+        :Tolak resolusi\ndengan alasan;
+        |Staff|
+        :Status = "in_progress";
+        :Menerima notifikasi\npenolakan resolusi;
+    endif
+repeat while (Tiket ditolak?)
+
+|Customer|
+if (Batalkan tiket?) then (Ya)
+    :Ajukan pembatalan\ntiket;
+    :Konfirmasi\npembatalan;
+
+    |Staff|
+    if (Status tiket?) then (open)
+        :Status = "cancelled";
+        #FFCDD2:Status final:\nTIKET DIBATALKAN;
+        detach
+    elseif (in_progress)
+        :Status = "cancelled";
+        #FFCDD2:Status final:\nTIKET DIBATALKAN;
+        detach
+    else (resolved / closed)
+        :Pembatalan ditolak\n(status tidak valid);
+        detach
+    endif
+else (Tidak)
+    stop
+endif
+
+@enduml

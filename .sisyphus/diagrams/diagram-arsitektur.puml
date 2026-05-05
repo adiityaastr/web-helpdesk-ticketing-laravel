@@ -1,0 +1,54 @@
+@startuml Deployment Diagram — Arsitektur Helpdesk Ticketing
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam rectangleBorderThickness 2
+skinparam rectangleFontStyle bold
+skinparam packageFontStyle bold
+skinparam packageFontSize 14
+skinparam packageBorderThickness 2
+
+title Arsitektur Deployment Sistem Helpdesk Ticketing\n
+
+package "Klien" #E3F2FD {
+    rectangle "Browser\n(React SPA)" as Browser #BBDEFB
+    rectangle "External API Client\n(Mobile / Third-party)" as Mobile #90CAF9
+}
+
+package "Reverse Proxy" #E8F5E9 {
+    rectangle "Nginx\nPort 8000" as Nginx #A5D6A7
+}
+
+package "Aplikasi Backend" #FFF3E0 {
+    rectangle "PHP-FPM\nLaravel 13\n(app)" as App #FFCC80
+    rectangle "Queue Worker\nphp artisan queue:work redis" as Queue #FFE0B2
+    rectangle "Vite Dev Server\nPort 5173\n(Development Only)" as Vite #FFECB3
+}
+
+package "Penyimpanan Data" #FFEBEE {
+    database "MySQL 8.0\nPort 3306" as MySQL #EF9A9A
+    database "Redis 7\nPort 6379\n(Cache / Session / Queue)" as Redis #F48FB1
+}
+
+Browser --> Nginx : "HTTP\nPort 8000"
+Mobile --> Nginx : "HTTP\n/api/v1/*"
+Nginx --> App : "FastCGI"
+App --> MySQL : "TCP\nPort 3306"
+App --> Redis : "TCP\nPort 6379"
+Queue --> Redis : "TCP\nPort 6379"
+Queue --> MySQL : "TCP\nPort 3306"
+Browser ..> Vite : "HMR\nPort 5173\n(dev only)"
+
+legend bottom right
+  |===
+  | Warna | Lapisan
+  | <#BBDEFB> | Frontend / Klien
+  | <#A5D6A7> | Web Server / Proxy
+  | <#FFCC80> | Backend / Aplikasi
+  | <#EF9A9A> | Database
+  | <#F48FB1> | Cache / Session / Queue
+  |===
+endlegend
+
+@enduml

@@ -1,0 +1,128 @@
+@startuml Sequence Diagram — Pembuatan & Update Tiket
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam sequenceActorBackgroundColor #E3F2FD
+skinparam sequenceActorBorderColor #1565C0
+skinparam sequenceParticipantBackgroundColor #FFFFFF
+skinparam sequenceParticipantBorderColor #333333
+skinparam sequenceLifeLineBorderColor #1565C0
+skinparam sequenceArrowThickness 2
+
+title Sequence Diagram — Skenario Tiket Helpdesk\n
+
+' ============================================================
+' A. PEMBUATAN TIKET OLEH CUSTOMER
+' ============================================================
+
+newpage A. Pembuatan Tiket oleh Customer
+
+actor "Customer\nBrowser" as CustBrowser
+participant "PortalTicketController" as PortalCtrl
+participant "TicketService" as TicketSvc
+participant "NotificationService" as NotifSvc
+participant "MySQL" as MySQL
+participant "Redis" as Redis
+
+CustBrowser -> PortalCtrl : POST /portal/tickets\n(submit form tiket)
+activate PortalCtrl
+
+PortalCtrl -> PortalCtrl : Validasi input\n(StoreTicketRequest)
+
+PortalCtrl -> TicketSvc : createTicket(data)
+activate TicketSvc
+
+TicketSvc -> MySQL : INSERT ticket\n(status = "open")
+activate MySQL
+MySQL --> TicketSvc : ticket_id
+deactivate MySQL
+
+TicketSvc -> MySQL : INSERT comment\n(komentar awal ticket)
+activate MySQL
+MySQL --> TicketSvc : comment_id
+deactivate MySQL
+
+TicketSvc -> MySQL : INSERT activity_log\n(action = "ticket_created")
+activate MySQL
+MySQL --> TicketSvc : log_id
+deactivate MySQL
+
+TicketSvc -> NotifSvc : notifyTicketUpdate(\nticket, action="created",\nnotifyAllStaff=true)
+activate NotifSvc
+
+NotifSvc -> MySQL : INSERT notifications\n(ke semua staff + reporter)
+activate MySQL
+MySQL --> NotifSvc : notification_ids
+deactivate MySQL
+
+NotifSvc --> TicketSvc : notifikasi terkirim
+deactivate NotifSvc
+
+TicketSvc -> Redis : INVALIDATE cache\n(dashboard, SAW scores)
+activate Redis
+Redis --> TicketSvc : OK
+deactivate Redis
+
+TicketSvc --> PortalCtrl : ticket
+deactivate TicketSvc
+
+PortalCtrl --> CustBrowser : Redirect ke halaman detail tiket\n(status=open, flash=sukses)
+deactivate PortalCtrl
+
+' ============================================================
+' B. UPDATE TIKET OLEH ADMIN
+' ============================================================
+
+newpage B. Update Tiket oleh Admin (Resolusi)
+
+actor "Admin\nBrowser" as AdminBrowser
+participant "AdminTicketController" as AdminCtrl
+participant "TicketService" as TicketSvc2
+participant "NotificationService" as NotifSvc2
+participant "MySQL" as MySQL2
+participant "Redis" as Redis2
+
+AdminBrowser -> AdminCtrl : PUT /admin/tickets/{id}\n(submit update tiket)
+activate AdminCtrl
+
+AdminCtrl -> AdminCtrl : Validasi input\n(UpdateTicketRequest)
+
+AdminCtrl -> AdminCtrl : Otorisasi\n(TicketPolicy::update())
+
+AdminCtrl -> TicketSvc2 : updateTicket(ticket, data)
+activate TicketSvc2
+
+TicketSvc2 -> MySQL2 : UPDATE ticket\nSET status = "resolved",\nresolved_at = NOW()
+activate MySQL2
+MySQL2 --> TicketSvc2 : OK
+deactivate MySQL2
+
+TicketSvc2 -> MySQL2 : INSERT activity_log\n(action = "ticket_resolved")
+activate MySQL2
+MySQL2 --> TicketSvc2 : log_id
+deactivate MySQL2
+
+TicketSvc2 -> NotifSvc2 : notifyTicketUpdate(\nticket, action="resolved",\ncomment=null,\nnotifyAllStaff=false)
+activate NotifSvc2
+
+NotifSvc2 -> MySQL2 : INSERT notifications\n(reporter + assignee)
+activate MySQL2
+MySQL2 --> NotifSvc2 : notification_ids
+deactivate MySQL2
+
+NotifSvc2 --> TicketSvc2 : notifikasi terkirim
+deactivate NotifSvc2
+
+TicketSvc2 -> Redis2 : INVALIDATE cache\n(dashboard, SAW scores)
+activate Redis2
+Redis2 --> TicketSvc2 : OK
+deactivate Redis2
+
+TicketSvc2 --> AdminCtrl : ticket updated
+deactivate TicketSvc2
+
+AdminCtrl --> AdminBrowser : Redirect ke halaman daftar tiket\n(flash message sukses)
+deactivate AdminCtrl
+
+@enduml
