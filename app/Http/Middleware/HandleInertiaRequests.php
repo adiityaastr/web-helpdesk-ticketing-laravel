@@ -22,7 +22,8 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $user ? Cache::remember("user_auth_{$user->id}", 300, function () use ($user) {
+                'user' => $user ? Cache::remember("user_auth_{$user->id}", 3600, function () use ($user) {
+                    $user->loadMissing('roles');
                     $roles = $user->roles->pluck('name')->values()->all();
                     return [
                         'id' => $user->id,
@@ -38,7 +39,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'notifications' => [
                 'unread_count' => fn () => $user
-                    ? Cache::remember("user_notif_count_{$user->id}", 60, fn () => $user->unreadNotifications()->count())
+                    ? Cache::remember("user_notif_count_{$user->id}", 300, fn () => $user->unreadNotifications()->count())
                     : 0,
             ],
             'flash' => [

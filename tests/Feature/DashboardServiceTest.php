@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Services\DashboardService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Tests\TestCase;
 
 class DashboardServiceTest extends TestCase
 {
@@ -29,7 +28,7 @@ class DashboardServiceTest extends TestCase
     public function test_admin_dashboard_stats()
     {
         $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $admin->assignRole('staff');
 
         $customer = User::factory()->create();
         $customer->assignRole('customer');

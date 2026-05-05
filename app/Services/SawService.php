@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\SawConfiguration;
 use App\Models\Ticket;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class SawService
 {
@@ -166,5 +168,22 @@ class SawService
                 $default
             );
         }
+    }
+
+    public function getScores(): array
+    {
+        return Cache::remember('admin_saw_scores', 300, function () {
+            try {
+                return $this->calculateScores();
+            } catch (\Exception $e) {
+                Log::error('SAW calculation failed: '.$e->getMessage(), ['exception' => $e]);
+                return [];
+            }
+        });
+    }
+
+    public function invalidateCache(): void
+    {
+        Cache::forget('admin_saw_scores');
     }
 }

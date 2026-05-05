@@ -19,8 +19,8 @@ class DashboardService
                     COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
                     COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved,
                     COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed,
-                    COUNT(CASE WHEN status NOT IN ('resolved', 'closed', 'cancelled') AND sla_deadline IS NOT NULL AND sla_deadline < NOW() THEN 1 END) as overdue
-                ")
+                    COUNT(CASE WHEN status NOT IN ('resolved', 'closed', 'cancelled') AND sla_deadline IS NOT NULL AND sla_deadline < ? THEN 1 END) as overdue
+                ", [now()])
                 ->first();
 
             return [

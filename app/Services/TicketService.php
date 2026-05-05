@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class TicketService
 {
@@ -54,6 +53,7 @@ class TicketService
         Cache::forget("portal_dashboard_stats_{$user->id}");
         Cache::forget('admin_dashboard_stats');
         Cache::forget('admin_dashboard_charts');
+        (new SawService())->invalidateCache();
 
         return $ticket;
     }
@@ -93,6 +93,7 @@ class TicketService
 
         Cache::forget('admin_dashboard_stats');
         Cache::forget('admin_dashboard_charts');
+        (new SawService())->invalidateCache();
 
         $changes = [];
         if ($oldStatus !== $ticket->status) {
@@ -134,6 +135,7 @@ class TicketService
         Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
         Cache::forget('admin_dashboard_stats');
         Cache::forget('admin_dashboard_charts');
+        (new SawService())->invalidateCache();
 
         return $ticket;
     }
@@ -170,6 +172,7 @@ class TicketService
         ]);
 
         $this->notifyRelatedUsers($ticket, 'confirmed');
+        (new SawService())->invalidateCache();
 
         return $ticket;
     }
@@ -209,6 +212,7 @@ class TicketService
 
         Cache::forget('admin_dashboard_stats');
         Cache::forget('admin_dashboard_charts');
+        (new SawService())->invalidateCache();
 
         return $ticket;
     }
@@ -226,6 +230,7 @@ class TicketService
         Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
         Cache::forget('admin_dashboard_stats');
         Cache::forget('admin_dashboard_charts');
+        (new SawService())->invalidateCache();
     }
 
     public function getTicketDetail(Ticket $ticket, User $user): array
@@ -275,6 +280,8 @@ class TicketService
             'rating' => $rating,
             'rating_comment' => $ratingComment,
         ]);
+
+        (new SawService())->invalidateCache();
 
         return $ticket;
     }

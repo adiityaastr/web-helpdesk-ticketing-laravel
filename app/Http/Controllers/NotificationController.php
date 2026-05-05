@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,8 +31,13 @@ class NotificationController extends Controller
 
     public function markAsRead(Request $request): RedirectResponse
     {
-        $request->user()->unreadNotifications->markAsRead();
+        // Use bulk UPDATE query instead of loading all notifications into memory
+        $user = $request->user();
+        $user->unreadNotifications()->update(['read_at' => now()]);
 
-        return redirect()->back()->with('success', 'Semua notifikasi ditandai sudah dibaca.');
+        // Invalidate the notification count cache
+        Cache::forget("user_notif_count_{$user->id}");
+
+        return redirect()->back()->with('success', 'Semua notifikasi telah ditandai sebagai dibaca');
     }
 }

@@ -16,8 +16,7 @@ return new class extends Migration
             DB::statement("ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_status_check");
             DB::statement("ALTER TABLE tickets ADD CONSTRAINT tickets_status_check CHECK (status IN ('open', 'in_progress', 'resolved', 'closed', 'cancelled'))");
         } elseif ($driver === 'sqlite') {
-            // SQLite doesn't support MODIFY COLUMN; the column is already VARCHAR
-            // and SQLite doesn't enforce CHECK on existing rows
+            // SQLite: status already includes 'cancelled' from the create_tickets migration
         } else {
             DB::statement("ALTER TABLE tickets MODIFY COLUMN status ENUM('open','in_progress','resolved','closed','cancelled') NOT NULL DEFAULT 'open'");
         }

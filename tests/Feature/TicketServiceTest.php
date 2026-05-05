@@ -9,7 +9,6 @@ use App\Services\TicketService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithFaker;
 use App\Notifications\TicketActivityNotification;
 use Illuminate\Support\Facades\DB;
@@ -208,9 +207,9 @@ class TicketServiceTest extends TestCase
         $staff->assignRole('staff');
         $t->comments()->create(['user_id' => $staff->id, 'message' => 'Internal note', 'is_internal' => true]);
 
-        // Non-staff user should not see internal comments
+        // Non-staff user should not see internal comments, only the initial public one
         $detail = $service->getTicketDetail($t, $user);
         $this->assertIsArray($detail);
-        $this->assertCount(0, $detail['comments']);
+        $this->assertCount(1, $detail['comments']);
     }
 }

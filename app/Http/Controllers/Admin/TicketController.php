@@ -16,7 +16,6 @@ use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,14 +34,7 @@ class TicketController extends Controller
             15
         );
 
-        $sawScores = Cache::remember('admin_saw_scores', 60, function () {
-            try {
-                return (new SawService())->calculateScores();
-            } catch (\Exception $e) {
-                Log::error('SAW calculation failed: '.$e->getMessage(), ['exception' => $e]);
-                return [];
-            }
-        });
+        $sawScores = (new SawService())->getScores();
 
         $ticketData = TicketResource::collection($tickets)->resolve();
         foreach ($ticketData as &$t) {
