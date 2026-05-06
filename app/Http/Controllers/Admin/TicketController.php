@@ -34,17 +34,8 @@ class TicketController extends Controller
             15
         );
 
-        $sawScores = (new SawService())->getScores();
-
-        $resolved = TicketResource::collection($tickets)->resolve();
-        $ticketItems = $resolved['data'] ?? $resolved;
-        foreach ($ticketItems as &$t) {
-            $t['saw_score'] = $sawScores[$t['id']] ?? null;
-        }
-        unset($t);
-
         return Inertia::render('Admin/Tickets/Index', [
-            'tickets' => $ticketItems,
+            'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'category_id', 'search']),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
@@ -60,7 +51,7 @@ class TicketController extends Controller
             'ticket' => new TicketResource($detail['ticket']),
             'comments' => $detail['comments'],
             'activityLogs' => $detail['activityLogs'],
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
             'staffUsers' => User::role('staff')->select('id', 'name')->orderBy('name')->get(),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],

@@ -9,6 +9,8 @@ class TicketResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $sawScores = app(\App\Services\SawService::class)->getScores();
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -28,6 +30,7 @@ class TicketResource extends JsonResource
             'is_sla_warning' => $this->isSlaWarning(),
             'is_cancellable' => $this->isCancellable(),
             'is_deletable' => $this->status === 'open' || $this->status === 'cancelled',
+            'saw_score' => $sawScores[$this->id] ?? null,
             'category' => [
                 'id' => $this->category?->id,
                 'name' => $this->category?->name,

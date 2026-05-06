@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>W2 - Register</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; background: #FFFFFF; color: #333; }
+.wf-card { border: 2px solid #333; border-radius: 8px; background: #FFF; }
+.wf-input { border: 1.5px solid #999; border-radius: 6px; height: 40px; display: flex; align-items: center; padding: 0 12px; color: #999; font-size: 13px; }
+.wf-btn-primary { background: #333; color: #FFF; border-radius: 6px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+.wf-label { font-size: 13px; font-weight: 500; color: #333; margin-bottom: 6px; }
+.wf-link { color: #333; font-weight: 600; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div style="display:flex; align-items:center; justify-content:center; min-height:1040px; padding:32px;">
+  <div style="display:flex; flex-direction:column; align-items:center; width:100%; max-width:420px;">
+    <div style="width:48px; height:48px; border:2px solid #333; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+      <span style="font-size:20px; font-weight:700; color:#333;">H</span>
+    </div>
+    <div style="font-size:24px; font-weight:700; color:#333; margin-bottom:4px;">Buat Akun Baru</div>
+    <div style="font-size:14px; color:#999; margin-bottom:32px;">Daftar untuk mengakses helpdesk</div>
+    <div class="wf-card" style="width:100%; padding:32px;">
+      <div style="margin-bottom:20px;">
+        <div class="wf-label">Nama Lengkap</div>
+        <div class="wf-input">Nama lengkap</div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div class="wf-label">Email</div>
+        <div class="wf-input">nama@perusahaan.com</div>
+      </div>
+      <div style="display:flex; gap:12px; margin-bottom:20px;">
+        <div style="flex:1;">
+          <div class="wf-label">Telepon</div>
+          <div class="wf-input">Opsional</div>
+        </div>
+        <div style="flex:1;">
+          <div class="wf-label">Departemen</div>
+          <div class="wf-input">Opsional ▾</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div class="wf-label">Password</div>
+        <div class="wf-input">Minimal 8 karakter</div>
+      </div>
+      <div style="margin-bottom:24px;">
+        <div class="wf-label">Konfirmasi Password</div>
+        <div class="wf-input">Ulangi password</div>
+      </div>
+      <div class="wf-btn-primary">Daftar</div>
+    </div>
+    <div style="margin-top:24px; font-size:13px; color:#666;">
+      Sudah punya akun? <span class="wf-link">Masuk</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

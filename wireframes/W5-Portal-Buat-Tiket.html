@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>W5 - Portal Buat Tiket</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; background: #FFF; color: #333; }
+.wf-sidebar { width: 240px; border-right: 2px solid #333; display: flex; flex-direction: column; flex-shrink: 0; }
+.wf-nav-item { padding: 10px 16px; font-size: 13px; color: #666; border-bottom: 1px solid #E0E0E0; }
+.wf-nav-active { padding: 10px 16px; font-size: 13px; font-weight: 600; color: #333; background: #F0F0F0; border-left: 3px solid #333; }
+.wf-input { border: 1.5px solid #999; border-radius: 6px; height: 40px; display: flex; align-items: center; padding: 0 12px; color: #999; font-size: 13px; }
+.wf-textarea { border: 1.5px solid #999; border-radius: 6px; height: 120px; padding: 12px; color: #999; font-size: 13px; }
+.wf-btn { background: #333; color: #FFF; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
+.wf-btn-outline { background: #FFF; color: #333; border: 1.5px solid #999; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; }
+.wf-label { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div style="display:flex; width:1440px; min-height:900px;">
+  <div class="wf-sidebar">
+    <div style="height:64px; padding:0 16px; display:flex; align-items:center; gap:10px; border-bottom:2px solid #333;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700;">H</span></div>
+      <div><div style="font-size:14px; font-weight:700;">Helpdesk</div><div style="font-size:11px; color:#999;">Portal Pelanggan</div></div>
+    </div>
+    <div class="wf-nav-item">Dashboard</div>
+    <div class="wf-nav-active">Tiket Saya</div>
+    <div class="wf-nav-item">Basis Pengetahuan</div>
+    <div style="flex:1;"></div>
+    <div style="padding:12px 16px; border-top:1px solid #E0E0E0; display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">A</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:500;">Ahmad User</div></div>
+    </div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <div style="height:64px; border-bottom:2px solid #333; padding:0 24px; display:flex; align-items:center;"></div>
+    <div style="flex:1; padding:24px;">
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">Buat Tiket Baru</div>
+      <div style="font-size:14px; color:#999; margin-bottom:24px;">Laporkan masalah atau permintaan kepada tim IT</div>
+      <div style="max-width:720px; border:1.5px solid #999; border-radius:8px; padding:24px;">
+        <div style="margin-bottom:20px;"><div class="wf-label">Kategori</div><div class="wf-input">Pilih kategori ▾</div></div>
+        <div style="margin-bottom:20px;"><div class="wf-label">Judul</div><div class="wf-input">Deskripsi singkat masalah Anda</div></div>
+        <div style="margin-bottom:20px;"><div class="wf-label">Deskripsi Lengkap</div><div class="wf-textarea">Jelaskan masalah atau permintaan Anda secara detail...</div></div>
+        <div style="margin-bottom:20px;"><div class="wf-label">Prioritas</div><div class="wf-input">Pilih prioritas ▾</div></div>
+        <div style="margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="wf-label">Lampiran</span><span style="font-size:12px; color:#999;">0/5</span></div>
+          <div style="display:flex; gap:8px;">
+            <div class="wf-btn-outline">Ambil Foto</div>
+            <div class="wf-btn-outline">Pilih File</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div class="wf-btn">Kirim Tiket</div>
+          <div class="wf-btn-outline">Batal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

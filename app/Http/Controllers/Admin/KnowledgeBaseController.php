@@ -25,7 +25,7 @@ class KnowledgeBaseController extends Controller
 
         return Inertia::render('Admin/KnowledgeBase/Index', [
             'articles' => $articles,
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
         ]);
     }
 

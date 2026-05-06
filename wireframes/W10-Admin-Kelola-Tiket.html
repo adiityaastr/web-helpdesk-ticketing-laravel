@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>W10 - Admin Kelola Tiket</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; background: #FFF; color: #333; }
+.wf-sidebar { width: 240px; border-right: 2px solid #333; display: flex; flex-direction: column; flex-shrink: 0; }
+.wf-nav-item { padding: 10px 16px; font-size: 13px; color: #666; border-bottom: 1px solid #E0E0E0; }
+.wf-nav-active { padding: 10px 16px; font-size: 13px; font-weight: 600; color: #FFF; background: #333; }
+.wf-badge { border: 1px solid #999; border-radius: 10px; padding: 2px 8px; font-size: 11px; display: inline-block; }
+.wf-input { border: 1.5px solid #999; border-radius: 6px; height: 36px; display: flex; align-items: center; padding: 0 12px; color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<div style="display:flex; width:1440px; min-height:900px;">
+  <div class="wf-sidebar">
+    <div style="height:64px; padding:0 16px; display:flex; align-items:center; gap:10px; border-bottom:2px solid #333;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700;">H</span></div>
+      <div style="display:flex; align-items:center; gap:6px;"><span style="font-size:14px; font-weight:700;">Helpdesk</span><span style="border:1px solid #333; border-radius:3px; padding:1px 6px; font-size:10px; font-weight:600;">ADMIN</span></div>
+    </div>
+    <div class="wf-nav-item">Dashboard</div>
+    <div class="wf-nav-active">Kelola Tiket</div>
+    <div class="wf-nav-item">Pengguna</div>
+    <div class="wf-nav-item">Kategori</div>
+    <div class="wf-nav-item">Departemen</div>
+    <div class="wf-nav-item">Pusat Bantuan</div>
+    <div style="flex:1;"></div>
+    <div style="padding:12px 16px; border-top:1px solid #E0E0E0; display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border-radius:50%; background:#333; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#FFF;">S</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:500;">Admin IT</div></div>
+    </div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <div style="height:64px; border-bottom:2px solid #333; padding:0 24px; display:flex; align-items:center; justify-content:space-between;">
+      <div class="wf-input" style="width:300px;">Cari...</div>
+      <div style="width:28px; height:28px; border:1.5px solid #999; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">5</div>
+    </div>
+    <div style="flex:1; padding:24px;">
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">Kelola Tiket</div>
+      <div style="font-size:14px; color:#999; margin-bottom:24px;">Kelola dan pantau semua tiket helpdesk</div>
+      <div style="display:flex; gap:12px; margin-bottom:20px;">
+        <div class="wf-input" style="flex:1;">Cari tiket...</div>
+        <div class="wf-input" style="width:160px;">Semua Status ▾</div>
+        <div class="wf-input" style="width:160px;">Semua Prioritas ▾</div>
+        <div class="wf-input" style="width:160px;">Semua Kategori ▾</div>
+      </div>
+      <div style="border:1.5px solid #999; border-radius:8px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:1.5fr 100px 80px 80px 70px 100px 90px 60px; padding:12px 16px; border-bottom:1.5px solid #999; background:#F0F0F0; font-size:11px; font-weight:600; text-transform:uppercase; color:#666;">
+          Judul / Pelapor / Kategori / Prioritas / Status / Petugas / Tanggal / SAW
+        </div>
+        <div style="display:grid; grid-template-columns:1.5fr 100px 80px 80px 70px 100px 90px 60px; padding:12px 16px; border-bottom:1px solid #E0E0E0; align-items:center; font-size:13px;">
+          <span style="font-weight:500;">Printer error</span><span style="color:#666;">Ahmad</span><span style="color:#666;">Hardware</span><span class="wf-badge">Tinggi</span><span class="wf-badge">Terbuka</span><span style="color:#666;">Belum</span><span style="font-size:12px; color:#999;">2 jam lalu</span><span class="wf-badge">0.85</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1.5fr 100px 80px 80px 70px 100px 90px 60px; padding:12px 16px; border-bottom:1px solid #E0E0E0; align-items:center; font-size:13px;">
+          <span style="font-weight:500;">WiFi down lantai 3</span><span style="color:#666;">Budi</span><span style="color:#666;">Network</span><span class="wf-badge">Kritis</span><span class="wf-badge">Diproses</span><span>Siti</span><span style="font-size:12px; color:#999;">1 hari lalu</span><span class="wf-badge">0.92</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1.5fr 100px 80px 80px 70px 100px 90px 60px; padding:12px 16px; align-items:center; font-size:13px;">
+          <span style="font-weight:500;">Lupa password email</span><span style="color:#666;">Dewi</span><span style="color:#666;">Akun</span><span class="wf-badge">Rendah</span><span class="wf-badge">Selesai</span><span>Budi</span><span style="font-size:12px; color:#999;">3 hari lalu</span><span class="wf-badge">0.45</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

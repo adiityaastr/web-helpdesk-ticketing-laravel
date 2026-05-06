@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>W7 - Portal Basis Pengetahuan</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; background: #FFF; color: #333; }
+.wf-sidebar { width: 240px; border-right: 2px solid #333; display: flex; flex-direction: column; flex-shrink: 0; }
+.wf-nav-item { padding: 10px 16px; font-size: 13px; color: #666; border-bottom: 1px solid #E0E0E0; }
+.wf-nav-active { padding: 10px 16px; font-size: 13px; font-weight: 600; color: #333; background: #F0F0F0; border-left: 3px solid #333; }
+</style>
+</head>
+<body>
+<div style="display:flex; width:1440px; min-height:900px;">
+  <div class="wf-sidebar">
+    <div style="height:64px; padding:0 16px; display:flex; align-items:center; gap:10px; border-bottom:2px solid #333;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700;">H</span></div>
+      <div><div style="font-size:14px; font-weight:700;">Helpdesk</div><div style="font-size:11px; color:#999;">Portal Pelanggan</div></div>
+    </div>
+    <div class="wf-nav-item">Dashboard</div>
+    <div class="wf-nav-item">Tiket Saya</div>
+    <div class="wf-nav-active">Basis Pengetahuan</div>
+    <div style="flex:1;"></div>
+    <div style="padding:12px 16px; border-top:1px solid #E0E0E0; display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;">A</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:500;">Ahmad User</div></div>
+    </div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <div style="height:64px; border-bottom:2px solid #333; padding:0 24px; display:flex; align-items:center;"></div>
+    <div style="flex:1; padding:24px;">
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">Basis Pengetahuan</div>
+      <div style="font-size:14px; color:#999; margin-bottom:24px;">Temukan artikel dan solusi untuk masalah umum</div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">HARDWARE</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Cara Mengatasi Printer Tidak Mau Mencetak</div>
+          <div style="font-size:12px; color:#999;">2 hari lalu</div>
+        </div>
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">EMAIL</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Panduan Reset Password Email Perusahaan</div>
+          <div style="font-size:12px; color:#999;">1 minggu lalu</div>
+        </div>
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">NETWORK</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Solusi WiFi Sering Terputus</div>
+          <div style="font-size:12px; color:#999;">2 minggu lalu</div>
+        </div>
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">SOFTWARE</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Cara Install Aplikasi VPN untuk Remote</div>
+          <div style="font-size:12px; color:#999;">3 minggu lalu</div>
+        </div>
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">HARDWARE</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Tata Cara Penggantian Toner Printer</div>
+          <div style="font-size:12px; color:#999;">1 bulan lalu</div>
+        </div>
+        <div style="border:1.5px solid #999; border-radius:8px; padding:20px;">
+          <div style="border:1px solid #999; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:500; display:inline-block; margin-bottom:12px;">AKUN</div>
+          <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Panduan Login SSO Perusahaan</div>
+          <div style="font-size:12px; color:#999;">1 bulan lalu</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>W11 - Admin Detail Tiket</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', Arial, sans-serif; background: #FFF; color: #333; }
+.wf-sidebar { width: 240px; border-right: 2px solid #333; display: flex; flex-direction: column; flex-shrink: 0; }
+.wf-nav-item { padding: 10px 16px; font-size: 13px; color: #666; border-bottom: 1px solid #E0E0E0; }
+.wf-nav-active { padding: 10px 16px; font-size: 13px; font-weight: 600; color: #FFF; background: #333; }
+.wf-card { border: 1.5px solid #999; border-radius: 8px; padding: 20px; }
+.wf-badge { border: 1px solid #999; border-radius: 10px; padding: 2px 8px; font-size: 11px; display: inline-block; }
+.wf-btn { background: #333; color: #FFF; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; }
+.wf-btn-outline { background: #FFF; color: #333; border: 1.5px solid #999; border-radius: 6px; padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; }
+.wf-btn-danger { background: #FFF; color: #E00; border: 1.5px solid #E00; border-radius: 6px; padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; }
+.wf-input { border: 1.5px solid #999; border-radius: 6px; height: 40px; display: flex; align-items: center; padding: 0 12px; color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<div style="display:flex; width:1440px; min-height:1600px;">
+  <div class="wf-sidebar">
+    <div style="height:64px; padding:0 16px; display:flex; align-items:center; gap:10px; border-bottom:2px solid #333;">
+      <div style="width:32px; height:32px; border:2px solid #333; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700;">H</span></div>
+      <div style="display:flex; align-items:center; gap:6px;"><span style="font-size:14px; font-weight:700;">Helpdesk</span><span style="border:1px solid #333; border-radius:3px; padding:1px 6px; font-size:10px; font-weight:600;">ADMIN</span></div>
+    </div>
+    <div class="wf-nav-item">Dashboard</div>
+    <div class="wf-nav-active">Kelola Tiket</div>
+    <div class="wf-nav-item">Pengguna</div>
+    <div class="wf-nav-item">Kategori</div>
+    <div class="wf-nav-item">Departemen</div>
+    <div class="wf-nav-item">Pusat Bantuan</div>
+    <div style="flex:1;"></div>
+    <div style="padding:12px 16px; border-top:1px solid #E0E0E0; display:flex; align-items:center; gap:10px;">
+      <div style="width:32px; height:32px; border-radius:50%; background:#333; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:#FFF;">S</div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:500;">Admin IT</div></div>
+    </div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <div style="height:64px; border-bottom:2px solid #333; padding:0 24px; display:flex; align-items:center;"></div>
+    <div style="flex:1; padding:24px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+            <span style="font-size:24px; font-weight:700;">Printer error</span>
+            <span class="wf-badge">Terbuka</span><span class="wf-badge">Tinggi</span>
+          </div>
+          <div style="font-size:13px; color:#999;">#ABC12345 · Dibuat 2 jam lalu</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div class="wf-btn-outline">Kembali</div>
+          <div class="wf-btn-danger">Hapus</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:20px;">
+        <div style="flex:2; display:flex; flex-direction:column; gap:20px;">
+          <div class="wf-card">
+            <div style="font-size:16px; font-weight:600; margin-bottom:12px;">Deskripsi</div>
+            <div style="font-size:14px; color:#666; line-height:1.6;">Printer di lantai 2 tidak bisa mencetak dokumen apapun.</div>
+          </div>
+          <div class="wf-card">
+            <div style="font-size:16px; font-weight:600; margin-bottom:16px;">Kelola Tiket</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+              <div><div style="font-size:13px; font-weight:500; margin-bottom:6px;">Status</div><div class="wf-input">Terbuka ▾</div></div>
+              <div><div style="font-size:13px; font-weight:500; margin-bottom:6px;">Prioritas</div><div class="wf-input">Tinggi ▾</div></div>
+              <div><div style="font-size:13px; font-weight:500; margin-bottom:6px;">Tugaskan ke</div><div class="wf-input">Belum ditugaskan ▾</div></div>
+            </div>
+            <div class="wf-btn" style="width:fit-content;">Simpan Perubahan</div>
+          </div>
+          <div class="wf-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <div style="font-size:16px; font-weight:600;">Komentar (2)</div>
+              <div style="display:flex; align-items:center; gap:6px;"><div style="width:16px; height:16px; border:1.5px solid #999; border-radius:3px;"></div><span style="font-size:13px; color:#666;">Catatan Internal</span></div>
+            </div>
+            <div style="border:1.5px solid #999; border-radius:6px; padding:12px; margin-bottom:16px;">
+              <div style="height:40px; background:#F0F0F0; border-radius:4px; margin-bottom:8px; font-size:13px; color:#999; padding:8px 12px;">Tulis komentar...</div>
+              <div style="display:flex; justify-content:flex-end;"><div class="wf-btn">Kirim</div></div>
+            </div>
+            <div style="border-bottom:1px solid #E0E0E0; padding-bottom:16px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-size:13px; font-weight:600;">Ahmad User</span><span style="font-size:12px; color:#999;">1 jam lalu</span></div>
+              <div style="font-size:13px; color:#666;">Mohon ditindaklanjuti segera.</div>
+            </div>
+            <div style="padding-left:12px; border-left:3px solid #999;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <div style="display:flex; align-items:center; gap:6px;"><span style="font-size:13px; font-weight:600;">Budi Staff</span><span class="wf-badge" style="font-size:10px;">Internal</span></div>
+                <span style="font-size:12px; color:#999;">30 menit lalu</span>
+              </div>
+              <div style="font-size:13px; color:#666;">Sudah dicek, akan dipesan piece baru.</div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+          <div class="wf-card">
+            <div style="font-size:16px; font-weight:600; margin-bottom:16px;">Detail Tiket</div>
+            <div style="display:flex; flex-direction:column; gap:12px; font-size:13px;">
+              <div style="display:flex; justify-content:space-between;"><span style="color:#999;">ID</span><span style="font-weight:500; font-family:monospace;">#ABC12345</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:#999;">Pelapor</span><span style="font-weight:500;">Ahmad User</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:#999;">Departemen</span><span style="font-weight:500;">IT</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:#999;">Kategori</span><span style="font-weight:500;">Hardware</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="color:#999;">Ditugaskan</span><span style="font-weight:500;">Belum</span></div>
+            </div>
+          </div>
+          <div class="wf-card">
+            <div style="font-size:16px; font-weight:600; margin-bottom:16px;">Log Aktivitas</div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="padding-left:12px; border-left:3px solid #333;">
+                <div style="font-size:11px; color:#999;">2 jam lalu</div>
+                <div style="font-size:13px;">Ahmad — Tiket dibuat</div>
+              </div>
+              <div style="padding-left:12px; border-left:3px solid #333;">
+                <div style="font-size:11px; color:#999;">1 jam lalu</div>
+                <div style="font-size:13px;">Admin — Prioritas diubah ke Tinggi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

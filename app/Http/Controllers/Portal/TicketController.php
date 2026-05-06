@@ -45,7 +45,7 @@ class TicketController extends Controller
     public function create(): Response
     {
         return Inertia::render('Portal/Tickets/Create', [
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()),
+            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()->toArray()),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
     }
