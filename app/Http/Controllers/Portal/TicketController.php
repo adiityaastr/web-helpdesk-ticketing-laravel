@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers\Portal;
 
+use App\Exceptions\TicketException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCommentRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Ticket;
+use App\Services\CacheManager;
 use App\Services\CommentService;
 use App\Services\NotificationService;
+use App\Services\SawService;
 use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,6 +36,8 @@ class TicketController extends Controller
             10
         );
 
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
+
         return Inertia::render('Portal/Tickets/Index', [
             'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'search']),
@@ -45,7 +49,7 @@ class TicketController extends Controller
     public function create(): Response
     {
         return Inertia::render('Portal/Tickets/Create', [
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()->toArray()),
+            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()->toArray()),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
     }
@@ -61,6 +65,8 @@ class TicketController extends Controller
     {
         $this->authorize('view', $ticket);
         $detail = $this->ticketService->getTicketWithDetails($ticket, false);
+
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
 
         return Inertia::render('Portal/Tickets/Show', [
             'ticket' => new TicketResource($detail['ticket']),
@@ -78,8 +84,8 @@ class TicketController extends Controller
 
         try {
             $this->ticketService->rateTicket($ticket, $request->user(), $validated['rating'], $validated['rating_comment'] ?? null);
-        } catch (\Exception $e) {
-            throw ValidationException::withMessages(['error' => $e->getMessage()]);
+        } catch (TicketException $e) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => $e->getMessage()]);
         }
 
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Rating berhasil dikirim.');
@@ -97,8 +103,8 @@ class TicketController extends Controller
         $this->authorize('view', $ticket);
         try {
             $this->ticketService->confirmResolution($ticket, auth()->user());
-        } catch (\Exception $e) {
-            throw ValidationException::withMessages(['error' => $e->getMessage()]);
+        } catch (TicketException $e) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => $e->getMessage()]);
         }
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Konfirmasi berhasil. Tiket telah ditutup.');
     }
@@ -110,8 +116,8 @@ class TicketController extends Controller
 
         try {
             $this->ticketService->rejectResolution($ticket, $validated['reason'], auth()->user());
-        } catch (\Exception $e) {
-            throw ValidationException::withMessages(['error' => $e->getMessage()]);
+        } catch (TicketException $e) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => $e->getMessage()]);
         }
 
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket dibuka kembali. Admin akan meninjau ulang.');

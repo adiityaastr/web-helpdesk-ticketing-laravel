@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\CacheManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -11,7 +12,7 @@ class DashboardService
 {
     public function getAdminStats(): array
     {
-        return Cache::remember('admin_dashboard_stats', 300, function () {
+        return Cache::remember(CacheManager::ADMIN_DASHBOARD_STATS, 300, function () {
             $row = Ticket::query()
                 ->selectRaw("
                     COUNT(*) as total,
@@ -36,7 +37,7 @@ class DashboardService
 
     public function getAdminCharts(): array
     {
-        return Cache::remember('admin_dashboard_charts', 300, function () {
+        return Cache::remember(CacheManager::ADMIN_DASHBOARD_CHARTS, 300, function () {
             $priorityChart = Ticket::query()
                 ->selectRaw('priority, COUNT(*) as total')
                 ->groupBy('priority')
@@ -85,18 +86,20 @@ class DashboardService
     {
         return User::query()
             ->role('staff')
-            ->withCount(['assignedTickets'])
+            ->withCount(['assignedTickets as active_count' => fn ($q) => $q->whereIn('status', ['open', 'in_progress'])])
+            ->orderByDesc('active_count')
+            ->limit(20)
             ->get()
             ->map(fn ($user) => [
                 'id' => $user->id,
                 'name' => $user->name,
-                'assigned_count' => $user->assigned_tickets_count,
+                'assigned_count' => $user->active_count,
             ]);
     }
 
     public function getPortalStats(User $user): array
     {
-        return Cache::remember("portal_dashboard_stats_{$user->id}", 300, function () use ($user) {
+        return Cache::remember(CacheManager::PORTAL_DASHBOARD_STATS . "_{$user->id}", 300, function () use ($user) {
             $row = Ticket::query()
                 ->where('user_id', $user->id)
                 ->selectRaw("
@@ -118,11 +121,10 @@ class DashboardService
 
     public function invalidateDashboardCache(?int $userId = null): void
     {
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
+        CacheManager::forgetAdminDashboard();
 
         if ($userId !== null) {
-            Cache::forget("portal_dashboard_stats_{$userId}");
+            CacheManager::forgetPortalDashboard($userId);
         }
     }
 }

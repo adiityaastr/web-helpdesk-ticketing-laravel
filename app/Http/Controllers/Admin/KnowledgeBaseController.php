@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\KnowledgeBase;
 use App\Models\Category;
+use App\Services\CacheManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -25,7 +26,7 @@ class KnowledgeBaseController extends Controller
 
         return Inertia::render('Admin/KnowledgeBase/Index', [
             'articles' => $articles,
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
+            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
         ]);
     }
 
@@ -72,6 +73,8 @@ class KnowledgeBaseController extends Controller
 
     public function destroy(KnowledgeBase $knowledgeBase): RedirectResponse
     {
+        $this->authorize('delete', $knowledgeBase);
+
         $knowledgeBase->delete();
 
         return redirect()->route('admin.knowledge-base.index')->with('success', 'Artikel berhasil dihapus.');

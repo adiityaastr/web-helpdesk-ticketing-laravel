@@ -2,17 +2,19 @@
 
 namespace App\Services;
 
+use App\Exceptions\TicketException;
 use App\Models\Comment;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\TicketActivityNotification;
+use App\Services\Traits\TrackTicketActivity;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
 class TicketService
 {
+    use TrackTicketActivity;
     /**
      * Create a new ticket from a request and reporter user.
      */
@@ -42,18 +44,10 @@ class TicketService
             'attachments' => $attachmentPaths,
         ]);
 
-        $ticket->activityLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'created',
-            'description' => 'Tiket dibuat oleh pelapor.',
-        ]);
+        $this->logActivity($ticket, $user, 'created', 'Tiket dibuat oleh pelapor.');
 
         $this->notifyRelatedUsers($ticket, 'created');
-
-        Cache::forget("portal_dashboard_stats_{$user->id}");
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket, $user->id);
 
         return $ticket;
     }
@@ -91,9 +85,7 @@ class TicketService
 
         $ticket->update($payload);
 
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket);
 
         $changes = [];
         if ($oldStatus !== $ticket->status) {
@@ -105,11 +97,7 @@ class TicketService
         }
 
         if (! empty($changes)) {
-            $ticket->activityLogs()->create([
-                'user_id' => $user->id,
-                'action' => 'updated',
-                'description' => implode('. ', $changes),
-            ]);
+            $this->logActivity($ticket, $user, 'updated', implode('. ', $changes));
         }
 
         $this->notifyRelatedUsers($ticket, 'updated');
@@ -124,18 +112,10 @@ class TicketService
             'cancelled_at' => now(),
         ]);
 
-        $ticket->activityLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'cancelled',
-            'description' => 'Tiket dibatalkan oleh pelapor.',
-        ]);
+        $this->logActivity($ticket, $user, 'cancelled', 'Tiket dibatalkan oleh pelapor.');
 
         $this->notifyRelatedUsers($ticket, 'cancelled');
-
-        Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket, $ticket->user_id);
 
         return $ticket;
     }
@@ -143,15 +123,15 @@ class TicketService
     public function confirmResolution(Ticket $ticket, User $user): Ticket
     {
         if ($ticket->user_id !== $user->id) {
-            throw new \Exception('Only reporter can confirm resolution');
+            throw TicketException::unauthorized();
         }
 
         if ($ticket->status !== 'resolved') {
-            throw new \Exception('Ticket not resolved yet');
+            throw TicketException::notResolved();
         }
 
         if ($ticket->resolved_confirmed_at) {
-            throw new \Exception('Already confirmed');
+            throw TicketException::alreadyConfirmed();
         }
 
         $ticket->update([
@@ -165,14 +145,10 @@ class TicketService
             'is_internal' => false,
         ]);
 
-        $ticket->activityLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'confirmed',
-            'description' => 'Pelapor mengonfirmasi penyelesaian tiket.',
-        ]);
+        $this->logActivity($ticket, $user, 'confirmed', 'Pelapor mengonfirmasi penyelesaian tiket.');
 
         $this->notifyRelatedUsers($ticket, 'confirmed');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket);
 
         return $ticket;
     }
@@ -180,15 +156,15 @@ class TicketService
     public function rejectResolution(Ticket $ticket, string $reason, User $user): Ticket
     {
         if ($ticket->user_id !== $user->id) {
-            throw new \Exception('Only reporter can reject resolution');
+            throw TicketException::unauthorized();
         }
 
         if ($ticket->status !== 'resolved') {
-            throw new \Exception('Ticket not resolved yet');
+            throw TicketException::notResolved();
         }
 
         if ($ticket->resolved_confirmed_at) {
-            throw new \Exception('Already confirmed');
+            throw TicketException::alreadyConfirmed();
         }
 
         $ticket->update([
@@ -202,17 +178,10 @@ class TicketService
             'is_internal' => false,
         ]);
 
-        $ticket->activityLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'rejected',
-            'description' => 'Pelapor menolak penyelesaian. Tiket dibuka kembali.',
-        ]);
+        $this->logActivity($ticket, $user, 'rejected', 'Pelapor menolak penyelesaian. Tiket dibuka kembali.');
 
         $this->notifyRelatedUsers($ticket, 'reopened');
-
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket);
 
         return $ticket;
     }
@@ -227,10 +196,7 @@ class TicketService
 
         $ticket->delete();
 
-        Cache::forget("portal_dashboard_stats_{$ticket->user_id}");
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
-        (new SawService())->invalidateCache();
+        $this->invalidateTicketCaches($ticket, $ticket->user_id);
     }
 
     public function getTicketDetail(Ticket $ticket, User $user): array
@@ -265,15 +231,15 @@ class TicketService
     public function rateTicket(Ticket $ticket, User $user, int $rating, ?string $ratingComment): Ticket
     {
         if ($ticket->user_id !== $user->id) {
-            throw new \Exception('Hanya pelapor yang dapat memberi rating.');
+            throw TicketException::unauthorized();
         }
 
         if ($ticket->status !== 'resolved') {
-            throw new \Exception('Tiket harus berstatus selesai untuk memberi rating.');
+            throw TicketException::cannotRate();
         }
 
         if ($ticket->rating !== null) {
-            throw new \Exception('Rating sudah diberikan.');
+            throw TicketException::alreadyRated();
         }
 
         $ticket->update([

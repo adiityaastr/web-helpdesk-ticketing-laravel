@@ -9,6 +9,7 @@ use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\CacheManager;
 use App\Services\CommentService;
 use App\Services\NotificationService;
 use App\Services\SawService;
@@ -34,12 +35,14 @@ class TicketController extends Controller
             15
         );
 
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
+
         return Inertia::render('Admin/Tickets/Index', [
             'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'category_id', 'search']),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
+            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
         ]);
     }
 
@@ -47,11 +50,13 @@ class TicketController extends Controller
     {
         $detail = $this->ticketService->getTicketWithDetails($ticket, true);
 
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
+
         return Inertia::render('Admin/Tickets/Show', [
             'ticket' => new TicketResource($detail['ticket']),
             'comments' => $detail['comments'],
             'activityLogs' => $detail['activityLogs'],
-            'categories' => Cache::rememberForever('reference_categories', fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
+            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
             'staffUsers' => User::role('staff')->select('id', 'name')->orderBy('name')->get(),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
@@ -98,8 +103,7 @@ class TicketController extends Controller
             $this->notificationService->notifyTicketUpdate($ticket, 'commented', $comment, false);
         }
 
-        Cache::forget('admin_dashboard_stats');
-        Cache::forget('admin_dashboard_charts');
+        CacheManager::forgetAdminDashboard();
 
         return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Komentar berhasil ditambahkan.');
     }

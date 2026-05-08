@@ -2,14 +2,22 @@
 
 namespace App\Http\Resources;
 
+use App\Services\SawService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class TicketResource extends JsonResource
 {
+    private static ?array $sharedScores = null;
+
+    public static function setSharedScores(?array $scores): void
+    {
+        static::$sharedScores = $scores;
+    }
+
     public function toArray(Request $request): array
     {
-        $sawScores = app(\App\Services\SawService::class)->getScores();
+        $scores = static::$sharedScores ?? app(SawService::class)->getScores();
 
         return [
             'id' => $this->id,
@@ -30,7 +38,7 @@ class TicketResource extends JsonResource
             'is_sla_warning' => $this->isSlaWarning(),
             'is_cancellable' => $this->isCancellable(),
             'is_deletable' => $this->status === 'open' || $this->status === 'cancelled',
-            'saw_score' => $sawScores[$this->id] ?? null,
+            'saw_score' => $scores[$this->id] ?? null,
             'category' => [
                 'id' => $this->category?->id,
                 'name' => $this->category?->name,

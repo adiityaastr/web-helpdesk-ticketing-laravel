@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\CacheManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -38,7 +39,7 @@ class CategoryController extends Controller
             'description' => $request->string('description') ?: null,
         ]);
 
-        Cache::forget('reference_categories');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil ditambahkan.');
     }
@@ -56,16 +57,23 @@ class CategoryController extends Controller
             'description' => $request->string('description') ?: null,
         ]);
 
-        Cache::forget('reference_categories');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil diperbarui.');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
+        $this->authorize('delete', $category);
+
+        if ($category->tickets()->exists()) {
+            return redirect()->route('admin.categories.index')
+                ->withErrors(['error' => 'Kategori tidak dapat dihapus karena masih memiliki tiket. Pindahkan tiket ke kategori lain terlebih dahulu.']);
+        }
+
         $category->delete();
 
-        Cache::forget('reference_categories');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.categories.index')->with('success', 'Kategori berhasil dihapus.');
     }

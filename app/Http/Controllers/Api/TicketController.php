@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Constants\FileConstants;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TicketResource;
 use App\Models\Category;
 use App\Models\Ticket;
+use App\Services\SawService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +31,8 @@ class TicketController extends Controller
             ->latest()
             ->paginate(10);
 
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
+
         return response()->json([
             'data' => TicketResource::collection($tickets),
             'meta' => [
@@ -46,8 +50,8 @@ class TicketController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'priority' => ['required', 'in:low,medium,high,critical'],
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240'],
+            'attachments' => ['nullable', 'array', 'max:' . FileConstants::MAX_FILES_PER_UPLOAD],
+            'attachments.*' => ['file', 'mimes:' . FileConstants::ALLOWED_MIME_EXTENSION, 'max:' . FileConstants::MAX_FILE_SIZE_KB],
         ]);
 
         $attachmentPaths = [];
@@ -106,8 +110,8 @@ class TicketController extends Controller
 
         $request->validate([
             'message' => ['required', 'string'],
-            'attachments' => ['nullable', 'array'],
-            'attachments.*' => ['file', 'max:10240'],
+            'attachments' => ['nullable', 'array', 'max:' . FileConstants::MAX_FILES_PER_UPLOAD],
+            'attachments.*' => ['file', 'mimes:' . FileConstants::ALLOWED_MIME_EXTENSION, 'max:' . FileConstants::MAX_FILE_SIZE_KB],
         ]);
 
         $attachmentPaths = [];

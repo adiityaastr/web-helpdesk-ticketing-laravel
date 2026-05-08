@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Services\CacheManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class DepartmentController extends Controller
             'name' => $request->string('name'),
         ]);
 
-        Cache::forget('reference_departments');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.departments.index')->with('success', 'Departemen berhasil ditambahkan.');
     }
@@ -50,16 +51,23 @@ class DepartmentController extends Controller
             'name' => $request->string('name'),
         ]);
 
-        Cache::forget('reference_departments');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.departments.index')->with('success', 'Departemen berhasil diperbarui.');
     }
 
     public function destroy(Department $department): RedirectResponse
     {
+        $this->authorize('delete', $department);
+
+        if ($department->users()->exists()) {
+            return redirect()->route('admin.departments.index')
+                ->withErrors(['error' => 'Departemen tidak dapat dihapus karena masih memiliki pengguna. Pindahkan pengguna ke departemen lain terlebih dahulu.']);
+        }
+
         $department->delete();
 
-        Cache::forget('reference_departments');
+        CacheManager::forgetReferences();
 
         return redirect()->route('admin.departments.index')->with('success', 'Departemen berhasil dihapus.');
     }

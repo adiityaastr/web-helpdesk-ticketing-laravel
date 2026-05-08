@@ -4,96 +4,370 @@ Aplikasi helpdesk ticketing berbasis web untuk mengelola tiket bantuan teknis, d
 
 ---
 
+## Daftar Isi
+
+- [Persyaratan Sistem](#persyaratan-sistem)
+- [Quick Start (Docker)](#quick-start-docker)
+- [Arsitektur Docker](#arsitektur-docker)
+- [Perintah Makefile](#perintah-makefile)
+- [Perintah Artisan dalam Container](#perintah-artisan-dalam-container)
+- [Service & Port](#service--port)
+- [Akun Default](#akun-default)
+- [Instalasi Manual (tanpa Docker)](#instalasi-manual-tanpa-docker)
+- [Struktur Halaman](#struktur-halaman)
+- [Fitur Utama](#fitur-utama)
+- [Alur Perizinan (Policy)](#alur-perizinan-policy)
+- [Database Schema](#database-schema)
+- [Konfigurasi Lanjutan](#konfigurasi-lanjutan)
+- [Performa & Optimasi](#performa--optimasi)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 ## Persyaratan Sistem
 
+### Dengan Docker
+
+| Kebutuhan | Minimal |
+|-----------|---------|
+| Docker | ^24.0 |
+| Docker Compose | ^2.20 |
+| RAM | 2 GB |
+| Disk | 5 GB |
+
+### Tanpa Docker
+
 | Kebutuhan | Versi |
-|---|---|
+|-----------|-------|
 | PHP | ^8.3 |
 | Composer | ^2.0 |
 | Node.js | ^18.0 |
 | NPM | ^9.0 |
 | Database | MySQL ^8.0 / PostgreSQL ^16 / SQLite 3 |
-| Ekstensi PHP | pdo_mysql / pdo_pgsql / pdo_sqlite, mbstring, xml, bcmath, curl, zip |
-
-> **Catatan:** Aplikasi support 3 driver database — MySQL, PostgreSQL, dan SQLite. Migrasi otomatis menyesuaikan perbedaan sintaks antar driver.
+| Ekstensi PHP | pdo_mysql / pdo_pgsql / pdo_sqlite, mbstring, xml, bcmath, curl, zip, redis |
 
 ---
 
-## Setup Instalasi
+## Quick Start (Docker)
 
-### A. Docker (Direkomendasikan — Production Ready)
+### 1. Clone Repository
 
 ```bash
 git clone <repository-url> ticketing-app
 cd ticketing-app
-docker compose up -d --build
 ```
 
-**Selesai.** Entrypoint otomatis akan:
-- Copy `.env.example` → `.env`
-- Install dependensi PHP (`composer install`)
-- Generate `APP_KEY`
-- Buat storage symlink
-- Tunggu database siap → jalankan `migrate` + `db:seed`
+### 2. Jalankan Semua Service
 
-Buka browser di **`http://localhost:8000`**
+```bash
+docker compose up -d
+```
 
-| Service | Port | Keterangan |
-|---|---|---|
-| Nginx | `8000` → `80` | Reverse proxy + static assets |
-| PHP-FPM 8.3 | internal | Application server |
-| MySQL 8.0 | `3306` | Database (volume persistent) |
-| Redis 7 | `6379` | Cache & session driver |
-| Queue Worker | internal | Proses notifikasi async |
+Tunggu hingga service siap (sekitar 60-90 detik pertama kali). Entrypoint otomatis akan:
 
-#### Hot-Reload (Development)
+1. Copy `.env.docker` → `.env`
+2. Buat folder `storage/` dan `bootstrap/cache/`
+3. Install dependensi PHP (`composer install`)
+4. Generate `APP_KEY`
+5. Buat storage symlink
+6. Tunggu database siap → jalankan `migrate`
+7. Seed database (role, user, kategori)
+8. Warm up cache
+
+### 3. Build Frontend Assets
+
+```bash
+npm install
+npm run build
+```
+
+> **PENTING**: Pastikan tidak ada file `public/hot`. Jika ada, hapus dengan `rm public/hot` agar aplikasi menggunakan aset build.
+
+### 4. Buka Browser
+
+```
+http://localhost:8000
+```
+
+### 5. Login
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@helpdesk.com` | `password` | Admin |
+| `staff@helpdesk.com` | `password` | Staff |
+| `user@helpdesk.com` | `password` | Customer |
+
+---
+
+## Arsitektur Docker
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Docker Host                        │
+│                                                      │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐         │
+│  │  Nginx   │──▶│ PHP-FPM  │──▶│  MySQL   │         │
+│  │  :8000   │   │  (app)   │   │  :3306   │         │
+│  └──────────┘   └────┬─────┘   └──────────┘         │
+│                      │                                │
+│                      ├──▶ ┌──────────┐               │
+│                      │    │  Redis   │               │
+│                      │    │  :6379   │               │
+│                      │    └──────────┘               │
+│                      │                                │
+│                      ├──▶ ┌──────────┐               │
+│                      │    │ MailHog  │               │
+│                      │    │  :8025   │               │
+│                      │    └──────────┘               │
+│                      │                                │
+│  ┌──────────┐        │                                │
+│  │  Queue   │────────┘                                │
+│  │  Worker  │                                         │
+│  └──────────┘        ┌──────────┐                    │
+│                      │ Adminer  │                    │
+│                      │  :8080   │                    │
+│                      └──────────┘                    │
+└─────────────────────────────────────────────────────┘
+```
+
+### Detail Service
+
+| Service | Container | Image | Port | Fungsi |
+|---------|-----------|-------|------|--------|
+| **app** | `helpdesk-app` | `php:8.3-fpm-alpine` (built) | internal | Application server, handle request PHP |
+| **nginx** | `helpdesk-nginx` | `nginx:1.26-alpine` | `8000→80` | Web server, reverse proxy, static assets |
+| **db** | `helpdesk-db` | `mysql:8.0` | `3306` | Database MySQL 8.0 |
+| **redis** | `helpdesk-redis` | `redis:7-alpine` | `6379` | Cache & session driver |
+| **queue** | `helpdesk-queue` | `php:8.3-fpm-alpine` (built) | internal | Queue worker untuk notifikasi async |
+| **mailhog** | `helpdesk-mailhog` | `mailhog/mailhog:v1.0.1` | `8025→8025` | Email testing (SMTP di port `1025`) |
+| **adminer** | `helpdesk-adminer` | `adminer:4.8.1-standalone` | `8080→8080` | Database management UI |
+| **vite** | `helpdesk-vite` | `node:22-alpine` | `5173→5173` | Vite dev server (hanya profile `dev`) |
+
+### Volume Persistent
+
+| Volume | Path | Isi |
+|--------|------|-----|
+| `db-data` | `/var/lib/mysql` | Data MySQL |
+| `db-backups` | `/backups` | Backup database |
+| `redis-data` | `/data` | Data Redis (RDB + AOF) |
+| `app-storage` | `/var/www/html/storage` | Log, cache, uploads |
+| `app-vendor` | `/var/www/html/vendor` | Dependensi Composer |
+| `vite-node-modules` | `/var/www/html/node_modules` | Dependensi NPM (dev) |
+| `nginx-logs` | `/var/log/nginx` | Log Nginx |
+
+### Network
+
+Semua service berkomunikasi melalui network bridge `app-network`. Service saling menjangkau menggunakan hostname container:
+
+- `app` → PHP-FPM di port 9000
+- `db` → MySQL di port 3306
+- `redis` → Redis di port 6379
+- `mailhog` → SMTP di port 1025
+
+### Healthcheck
+
+Setiap service memiliki healthcheck untuk memastikan dependensi berjalan dengan urutan yang benar:
+
+```
+db (healthy) ──┐
+                ├──▶ app (healthy) ──▶ nginx
+redis (healthy)─┘        │
+                          └──▶ queue
+```
+
+---
+
+## Perintah Makefile
+
+Gunakan `make` untuk shortcut perintah yang paling sering dipakai.
+
+### Start / Stop
+
+```bash
+make up              # Start semua service (background)
+make down            # Stop semua service
+make restart         # Restart semua service
+make build           # Build ulang image (no cache)
+make rebuild         # Down → build → up
+```
+
+### Development
+
+```bash
+make dev             # Start service + Vite hot-reload
+make shell           # Masuk shell container app
+make mysql           # Masuk MySQL shell
+make redis-cli       # Masuk Redis CLI
+```
+
+### Database
+
+```bash
+make migrate         # Jalankan migrasi
+make seed            # Jalankan seeder
+make fresh           # Reset database + seed
+```
+
+### Artisan
+
+```bash
+make art t=migrate:status    # Jalankan artisan apa saja
+make tinker                   # Masuk Laravel Tinker
+make cache                    # Warm up cache (optimize)
+make clear                    # Clear semua cache
+```
+
+### Monitoring
+
+```bash
+make logs            # Tail semua log service
+make ps              # Status container
+make stats           # Resource usage container
+```
+
+### Cleanup
+
+```bash
+make prune           # Hapus semua container + volume + image
+```
+
+---
+
+## Perintah Artisan dalam Container
+
+### Migrasi & Seeder
+
+```bash
+docker compose exec app php artisan migrate              # Jalankan migrasi
+docker compose exec app php artisan migrate:rollback     # Rollback migrasi
+docker compose exec app php artisan migrate:fresh --seed # Reset DB + seed
+docker compose exec app php artisan db:seed              # Seed database
+```
+
+### Cache
+
+```bash
+docker compose exec app php artisan optimize             # Warm up cache (config, route, view)
+docker compose exec app php artisan optimize:clear       # Clear semua cache
+docker compose exec app php artisan config:clear         # Clear config cache
+docker compose exec app php artisan route:clear          # Clear route cache
+docker compose exec app php artisan view:clear           # Clear view cache
+```
+
+### Storage
+
+```bash
+docker compose exec app php artisan storage:link         # Buat symlink storage
+docker compose exec app php artisan storage:unlink       # Hapus symlink storage
+```
+
+### Queue
+
+```bash
+docker compose exec app php artisan queue:failed         # Lihat failed jobs
+docker compose exec app php artisan queue:retry all      # Retry semua failed jobs
+docker compose exec app php artisan queue:flush          # Hapus semua failed jobs
+docker compose restart queue                             # Restart queue worker
+```
+
+### Testing
+
+```bash
+docker compose exec app php artisan test                 # Jalankan PHPUnit
+docker compose exec app php artisan test --filter=...    # Filter test spesifik
+```
+
+### Log & Monitoring
+
+```bash
+docker compose logs -f app          # Log PHP-FPM
+docker compose logs -f nginx        # Log Nginx
+docker compose logs -f queue        # Log queue worker
+docker compose logs -f db           # Log MySQL
+docker compose logs -f --tail=100   # 100 baris terakhir semua
+```
+
+---
+
+## Service & Port
+
+### Aplikasi Utama
+
+| URL | Keterangan |
+|-----|------------|
+| `http://localhost:8000` | Aplikasi Helpdesk |
+| `http://localhost:8000/health` | Health check Nginx |
+
+### Email Testing (MailHog)
+
+| URL | Keterangan |
+|-----|------------|
+| `http://localhost:8025` | MailHog Web UI |
+| SMTP: `localhost:1025` | SMTP endpoint |
+
+**Cara test email**: Semua email yang dikirim aplikasi (misal: notifikasi, reset password) otomatis tertangkap MailHog. Buka `http://localhost:8025` untuk melihatnya. Tidak ada email yang benar-benar terkirim ke luar.
+
+### Database Management (Adminer)
+
+| URL | Keterangan |
+|-----|------------|
+| `http://localhost:8080` | Adminer UI |
+
+**Login Adminer**:
+- **System**: MySQL
+- **Server**: `db`
+- **Username**: `helpdesk`
+- **Password**: `secret`
+- **Database**: `helpdesk_db`
+
+### Vite Dev Server (Hot Reload)
 
 ```bash
 docker compose --profile dev up -d vite
 ```
 
-Vite dev server di `http://localhost:5173` — file `public/hot` otomatis dibuat, CSS/JS dimuat via HMR.
+| URL | Keterangan |
+|-----|------------|
+| `http://localhost:5173` | Vite HMR server |
 
-Jika tidak pakai Vite, build frontend manual:
+Saat Vite berjalan, file `public/hot` otomatis dibuat. CSS/JS React dimuat via hot-reload.
 
+**Untuk kembali ke aset build**, hentikan Vite dan hapus file hot:
 ```bash
-npm install && npm run build
-# Hapus public/hot jika ada agar aset build yg digunakan
-```
-
-#### Perintah dalam Container
-
-```bash
-docker compose exec app php artisan migrate          # Migrasi manual
-docker compose exec app php artisan db:seed           # Seed manual
-docker compose exec app php artisan migrate:fresh --seed  # Reset DB
-docker compose exec app php artisan optimize:clear    # Clear cache
-docker compose exec app php artisan storage:link      # Symlink storage
-docker compose logs app                               # Lihat log
-docker compose restart queue                          # Restart queue worker
-```
-
-#### Deploy ke Server
-
-```bash
-# 1. Clone & setup
-git clone <url> /opt/helpdesk && cd /opt/helpdesk
-
-# 2. Build aset frontend di host (sebelum Docker build)
-npm install && npm run build
-
-# 3. Jalankan
-docker compose up -d --build
-
-# 4. (Opsional) Setup cron untuk scheduler Laravel
-echo "* * * * * docker compose -f /opt/helpdesk/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1" | crontab -
+docker compose --profile dev down vite
+rm public/hot
 ```
 
 ---
 
-### B. Instalasi Manual (Local Dev)
+## Akun Default
 
-#### 1. Clone & Install
+Setelah `db:seed`, 3 akun tersedia:
+
+| Email | Password | Role | Akses |
+|-------|----------|------|-------|
+| `admin@helpdesk.com` | `password` | admin | Dashboard Admin, Kelola Tiket, Kelola User, Kelola Kategori, SAW Config |
+| `staff@helpdesk.com` | `password` | staff | Dashboard Admin, Kelola Tiket, Komentar Internal |
+| `user@helpdesk.com` | `password` | customer | Portal Pelanggan, Buat Tiket, Lihat Tiket Sendiri |
+
+### Role & Permission
+
+| Role | Permission |
+|------|------------|
+| **admin** | Semua akses — full CRUD tiket, user, kategori, knowledge base, SAW config |
+| **staff** | Kelola tiket, assign tiket, komentar internal, lihat dashboard admin |
+| **customer** | Buat tiket, lihat tiket sendiri, komentar publik, batalkan tiket, beri rating |
+
+### Data Awal
+
+- **3 role** — admin, staff, customer
+- **5 kategori** — Hardware, Software, Jaringan, Akses Akun, Lainnya
+
+---
+
+## Instalasi Manual (tanpa Docker)
+
+### 1. Clone & Install Dependensi
 
 ```bash
 git clone <repository-url> ticketing-app
@@ -101,15 +375,14 @@ cd ticketing-app
 composer install
 cp .env.example .env
 php artisan key:generate
-npm install && npm run build
 ```
 
-#### 2. Konfigurasi Database
+### 2. Konfigurasi Database
 
 Edit `.env` — pilih salah satu:
 
 <details>
-<summary>MySQL / MariaDB</summary>
+<summary><b>MySQL / MariaDB</b></summary>
 
 ```env
 DB_CONNECTION=mysql
@@ -126,7 +399,7 @@ CREATE DATABASE helpdesk_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 </details>
 
 <details>
-<summary>PostgreSQL</summary>
+<summary><b>PostgreSQL</b></summary>
 
 ```env
 DB_CONNECTION=pgsql
@@ -143,7 +416,7 @@ CREATE DATABASE helpdesk;
 </details>
 
 <details>
-<summary>SQLite (zero-config, cocok untuk dev)</summary>
+<summary><b>SQLite</b> (zero-config, cocok untuk dev)</summary>
 
 ```env
 DB_CONNECTION=sqlite
@@ -155,93 +428,47 @@ php -r "touch('database/database.sqlite');"
 ```
 </details>
 
-#### 3. Migrasi, Seed, Storage
+### 3. Konfigurasi Session & Cache
+
+Untuk development tanpa Redis, gunakan file driver:
+
+```env
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+```
+
+### 4. Migrasi, Seed, Storage
 
 ```bash
 php artisan migrate
 php artisan db:seed
-```
-
-Perintah ini akan membuat seluruh tabel dan mengisi data awal:
-- **3 user default** (admin, staff, customer) dengan password `password`
-- **3 role** (admin, staff, customer) beserta permission-nya
-- **5 kategori** tiket (Hardware, Software, Jaringan, Akses Akun, Lainnya)
-
-#### 4. Storage Link
-
-```bash
 php artisan storage:link
 ```
 
-Diperlukan agar file lampiran (foto, PDF) yang diupload bisa diakses melalui URL.
-
-#### 6. Install Dependensi Frontend & Build
+### 5. Install & Build Frontend
 
 ```bash
 npm install
 npm run build
 ```
 
-#### 7. Jalankan Aplikasi
+### 6. Jalankan Aplikasi
 
-**Untuk development** (direkomendasikan):
-
+**Development** (dengan hot reload):
 ```bash
 composer dev
 ```
+Menjalankan 4 proses sekaligus: `php artisan serve`, `php artisan queue:listen`, `php artisan pail`, `npm run dev`
 
-Perintah ini menjalankan 4 proses sekaligus:
-- `php artisan serve` (backend di port 8000)
-- `php artisan queue:listen` (queue worker)
-- `php artisan pail` (log viewer)
-- `npm run dev` (Vite hot-reload)
-
-**Atau secara manual**:
-
+**Manual** (tanpa Composer script):
 ```bash
-php artisan serve        # Terminal 1
-php artisan queue:listen # Terminal 2
-npm run dev              # Terminal 3
+php artisan serve                    # Terminal 1 — backend
+php artisan queue:listen --tries=1   # Terminal 2 — queue worker
+npm run dev                          # Terminal 3 — Vite HMR
 ```
 
 Buka browser di `http://127.0.0.1:8000`
-
----
-
-## Akun Default
-
-Setelah `db:seed`, 3 akun tersedia:
-
-| Email | Password | Role | Akses |
-|---|---|---|---|
-| `admin@helpdesk.com` | `password` | admin | Dashboard Admin, Kelola Tiket, Kelola User, Kelola Kategori, dll |
-| `staff@helpdesk.com` | `password` | staff | Dashboard Admin, Kelola Tiket, Komentar Internal |
-| `user@helpdesk.com` | `password` | customer | Portal Pelanggan, Buat Tiket, Lihat Tiket Sendiri |
-
----
-
-## Arsitektur Aplikasi
-
-### Tech Stack
-
-| Layer | Teknologi |
-|---|---|
-| Backend | Laravel 13 (PHP 8.3+) |
-| Frontend | React 19 + Inertia.js 3 |
-| Styling | Tailwind CSS 4 |
-| Charts | Chart.js + react-chartjs-2 |
-| Build Tool | Vite 8 |
-| Permissions | spatie/laravel-permission |
-| Database | MySQL 8 / PostgreSQL 16 / SQLite 3 |
-| Prioritas | SAW (Simple Additive Weighting) |
-
-### Alur Data
-
-```
-Browser → Inertia.js → Laravel Controller → Inertia Response → React Page
-```
-
-Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai props ke komponen React, tanpa perlu API terpisah.
 
 ---
 
@@ -250,7 +477,7 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 ### Portal Pelanggan (role: customer)
 
 | Route | Halaman | Fungsi |
-|---|---|---|
+|-------|---------|--------|
 | `/portal/dashboard` | Dashboard | Ringkasan tiket pelanggan |
 | `/portal/tickets` | Daftar Tiket | Lihat semua tiket milik pelanggan |
 | `/portal/tickets/create` | Buat Tiket | Form pembuatan tiket + upload lampiran + kamera |
@@ -262,7 +489,7 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 ### Admin Panel (role: staff, admin)
 
 | Route | Halaman | Fungsi |
-|---|---|---|
+|-------|---------|--------|
 | `/admin/dashboard` | Dashboard Admin | Statistik, chart, tiket terbaru, beban kerja staff |
 | `/admin/tickets` | Kelola Tiket | Daftar semua tiket + filter (status, prioritas, kategori, petugas) |
 | `/admin/tickets/{id}` | Detail Tiket | Ubah status/prioritas/penugasan, komentar internal, log aktivitas |
@@ -270,6 +497,7 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 | `/admin/categories` | Kelola Kategori | CRUD kategori tiket |
 | `/admin/knowledge-base` | Pusat Bantuan | CRUD artikel basis pengetahuan |
 | `/admin/templates` | Template Respon | CRUD template respons cepat untuk komentar |
+| `/admin/saw-configuration` | Konfigurasi SAW | Atur bobot kriteria prioritas otomatis |
 
 ---
 
@@ -278,8 +506,8 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 ### Tiket Helpdesk
 
 - **Status Flow** — `open` → `in_progress` → `resolved` → (user confirm) → `closed`. Tiket juga bisa `cancelled`.
-- **Konfirmasi Ganda** — Saat admin set `resolved`, user harus konfirmasi: **Ya, Selesai** (→ `closed`) atau **Belum, Masih Ada Masalah** (→ `in_progress`). Histori komentar tetap tampil sebagai bukti.
-- **Prioritas** — `low`, `medium`, `high`, `critical` dengan badge warna + skor SAW.
+- **Konfirmasi Ganda** — Saat admin set `resolved`, user harus konfirmasi: **Ya, Selesai** (→ `closed`) atau **Belum, Masih Ada Masalah** (→ `in_progress`).
+- **Prioritas** — `low`, `medium`, `high`, `critical` dengan badge warna + skor SAW otomatis.
 - **Penugasan** — Admin menugaskan staff ke tiket.
 - **Komentar Internal** — Staff/admin bisa menambahkan catatan internal yang tidak terlihat pelanggan.
 - **Komentar Terkunci** — Otomatis dikunci saat tiket `closed` atau `cancelled`.
@@ -314,7 +542,7 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 ### TicketPolicy
 
 | Aksi | customer | staff | admin |
-|---|---|---|---|
+|------|----------|-------|-------|
 | Lihat tiket sendiri (`view`) | ✅ | ✅ | ✅ |
 | Lihat semua tiket | ❌ | ✅ | ✅ |
 | Buat tiket (`create`) | ✅ | ✅ | ✅ |
@@ -323,10 +551,10 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 | Komentar (`comment`) | Hanya tiket sendiri | ✅ | ✅ |
 | Batalkan (`cancel`) | Hanya tiket sendiri yang masih aktif | ✅ | ✅ |
 
-### Yang Bisa Diubah Admin di Tiket
+### Field yang Bisa Diubah Admin di Tiket
 
 | Field | Bisa diubah admin? |
-|---|---|
+|-------|--------------------|
 | Status | ✅ |
 | Prioritas | ✅ |
 | Ditugaskan ke (assigned_to) | ✅ |
@@ -337,10 +565,10 @@ Inertia.js berfungsi sebagaipenghubung: controller Laravel mengirim data sebagai
 ### Role Middleware
 
 | Route Group | Middleware |
-|---|---|
+|-------------|------------|
 | Portal (dashboard, buat tiket) | `auth` + `role:customer` |
-| Portal (lihat, komentar, rating) | `auth` + `role:customer|staff|admin` |
-| Admin (semua) | `auth` + `role:staff|admin` |
+| Portal (lihat, komentar, rating) | `auth` + `role:customer\|staff\|admin` |
+| Admin (semua) | `auth` + `role:staff\|admin` |
 | Notifikasi | `auth` |
 
 ---
@@ -408,7 +636,7 @@ personal_access_tokens
 ### Enum Values
 
 | Kolom | Values |
-|---|---|
+|-------|--------|
 | `tickets.priority` | `low`, `medium`, `high`, `critical` |
 | `tickets.status` | `open`, `in_progress`, `resolved`, `closed`, `cancelled` |
 | `comments.is_internal` | `0` (publik), `1` (internal) |
@@ -416,118 +644,139 @@ personal_access_tokens
 
 ---
 
-## Konfigurasi Tambahan
+## Konfigurasi Lanjutan
 
-### Queue Worker (Produksi)
+### Environment Variables (`.env.docker`)
 
-Aplikasi menggunakan `QUEUE_CONNECTION=database`. Untuk produksi, jalankan:
+```env
+# Aplikasi
+APP_NAME=Helpdesk
+APP_ENV=local                          # local | production
+APP_DEBUG=true                         # true | false
+APP_URL=http://localhost:8000
 
-```bash
-php artisan queue:work --daemon
+# Database (Docker)
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=helpdesk_db
+DB_USERNAME=helpdesk
+DB_PASSWORD=secret
+
+# Redis (Cache + Session + Queue)
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=null
+REDIS_CLIENT=phpredis
+SESSION_DRIVER=redis
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+
+# Mail (MailHog untuk development)
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
 ```
 
-Atau set up sebagai systemd service / Supervisor.
-
-### Cron (Produksi)
-
-Tambahkan ke crontab server:
+### Deploy ke Server Produksi
 
 ```bash
-* * * * * php /path/to/ticketing-app/artisan schedule:run >> /dev/null 2>&1
+# 1. Clone di server
+git clone <url> /opt/helpdesk
+cd /opt/helpdesk
+
+# 2. Copy & edit environment
+cp .env.docker .env
+# Edit APP_ENV=production, APP_DEBUG=false, APP_URL=<domain>
+
+# 3. Build frontend di host (sebelum Docker)
+npm install
+npm run build
+
+# 4. Start service
+docker compose up -d --build
+
+# 5. Setup cron untuk Laravel scheduler
+echo "* * * * * docker compose -f /opt/helpdesk/docker-compose.yml exec -T app php artisan schedule:run >> /dev/null 2>&1" | crontab -
 ```
 
-### Storage
-
-Pastikan folder berikut writable oleh web server:
+### Backup Database
 
 ```bash
-chmod -R 775 storage
-chmod -R 775 bootstrap/cache
+# Backup
+docker compose exec db mysqldump -u helpdesk -psecret helpdesk_db > backup_$(date +%Y%m%d).sql
+
+# Restore
+docker compose exec -T db mysql -u helpdesk -psecret helpdesk_db < backup_20250101.sql
 ```
 
-File lampiran tiket disimpan di `storage/app/public/tickets/` dan diakses via `http://domain/storage/tickets/...`.
+### Custom Port
 
-### SAW — Prioritas Otomatis
+Edit `docker-compose.override.yml`:
 
-Skor SAW (Simple Additive Weighting) dihitung otomatis untuk semua tiket dan ditampilkan di kolom **SAW** pada halaman `/admin/tickets`. 5 kriteria: C1 (Prioritas), C2 (Urgensi SLA), C3 (Waktu Tunggu), C4 (Aktivitas Pelanggan), C5 (Kompleksitas). Skor di-cache 60 detik untuk performa.
+```yaml
+services:
+  nginx:
+    ports:
+      - "8080:80"    # Ganti dari 8000 ke 8080
+  db:
+    ports:
+      - "3307:3306"  # Ganti port MySQL
+```
 
 ---
 
 ## Performa & Optimasi
 
 | Optimasi | Keterangan |
-|---|---|
+|----------|------------|
+| OPcache | 256MB memory, 10000 max files, CLI enabled |
+| APCu | Object caching via PECL |
 | DB Indexes | `tickets(status, priority, user_id, assigned_to)`, `comments(ticket_id)`, `notifications(notifiable_id, read_at)` |
-| Cache SAW | Skor SAW di-cache 60 detik via Redis/file |
-| Debounce Search | Input search ditunda 400ms — kurangi request server |
-| System Fonts | Font system stack (tanpa Google Fonts CDN) — FCP lebih cepat |
-| Inertia Progress | Progress bar teal saat navigasi antar halaman |
-| N+1 Prevention | Semua list pakai `->with()` eager loading |
+| Cache SAW | Skor SAW di-cache 60 detik via Redis |
 | Cache Dashboard | Stats dashboard admin di-cache 300 detik |
-| Static Assets | Cache 7 hari via Nginx untuk CSS/JS/font
-
----
-
-## Perintah yang Berguna
-
-```bash
-# === Lokal ===
-
-# Setup lengkap dari nol
-composer setup
-
-# Development (server + queue + logs + vite)
-composer dev
-
-# Build aset untuk produksi
-npm run build
-
-# Jalankan test
-composer test
-
-# Reset database
-php artisan migrate:fresh --seed
-
-# Bersihkan cache
-php artisan optimize:clear
-
-# Buat storage link
-php artisan storage:link
-
-# Jalankan queue worker
-php artisan queue:listen
-
-# === Docker ===
-
-# Jalankan semua service
-docker compose up -d
-
-# Masuk ke container app
-docker compose exec app bash
-
-# Jalankan perintah artisan dalam container
-docker compose exec app php artisan migrate --force
-docker compose exec app php artisan db:seed --force
-docker compose exec app php artisan storage:link
-
-# Restart service tertentu
-docker compose restart app nginx queue
-```
+| Debounce Search | Input search ditunda 400ms — kurangi request server |
+| N+1 Prevention | Semua list pakai `->with()` eager loading |
+| Nginx Gzip | Compression level 6 untuk text assets |
+| Nginx Static | Cache 7 hari untuk CSS/JS/font/images |
+| MySQL Tuning | InnoDB buffer pool 256MB, max connections 100 |
+| Redis Tuning | Max memory 256MB, LRU eviction, AOF persistence |
+| FastCGI Tuning | Connection timeout 60s, buffer 16x16k, keepalive 8 |
 
 ---
 
 ## Troubleshooting
 
+### Docker
+
 | Masalah | Solusi |
-|---|---|
-| Halaman putih / blank hitam | Hapus `public/hot` lalu `npm run build` dan `php artisan optimize:clear` |
-| Halaman 500 error | `php artisan optimize:clear` lalu `npm run build` |
+|---------|--------|
+| Container tidak start | `docker compose logs app` — cek error |
+| Database connection refused | Tunggu `db` healthcheck selesai (bisa 30-60s pertama kali) |
+| Port 8000 sudah dipakai | Ubah port di `docker-compose.override.yml` |
+| composer install gagal | `docker compose exec app composer install --ignore-platform-reqs` |
+| Permission storage error | `docker compose exec app chmod -R 775 storage bootstrap/cache` |
+| app_key kosong | `docker compose exec app php artisan key:generate` |
+| Queue worker tidak jalan | `docker compose restart queue` |
+| Redis connection error | `docker compose restart redis` |
+
+### Aplikasi
+
+| Masalah | Solusi |
+|---------|--------|
+| Halaman putih / blank | Hapus `public/hot` lalu `npm run build` dan `php artisan optimize:clear` |
 | CSS tidak muncul | `npm run build` lalu `php artisan optimize:clear` |
-| Asset mengarah ke `localhost:5173` | Hapus file `public/hot` agar aplikasi menggunakan aset build |
-| Upload lampiran gagal | Pastikan `php artisan storage:link` sudah dijalankan dan `storage/app/public` writable |
-| Login error 419 | `php artisan optimize:clear`, hapus cookie browser |
-| Permission denied saat queue | Pastikan `storage/` dan `bootstrap/cache/` writable |
-| Notifikasi tidak muncul | Pastikan `php artisan queue:listen` sedang berjalan |
-| Role tidak tersedia | `php artisan db:seed --class=RolePermissionSeeder` |
-| Kategori kosong | `php artisan db:seed --class=CategorySeeder` |
-| Migration error di SQLite | Pastikan file `database/database.sqlite` sudah dibuat (`touch database/database.sqlite`) |
+| Asset mengarah ke `localhost:5173` | Hapus file `public/hot` agar gunakan aset build |
+| Upload lampiran gagal | `docker compose exec app php artisan storage:link` |
+| Login error 419 | `docker compose exec app php artisan optimize:clear` |
+| Notifikasi tidak muncul | `docker compose restart queue` |
+| Migration error | `docker compose exec app php artisan migrate:fresh --seed` |
+
+### Database
+
+| Masalah | Solusi |
+|---------|--------|
+| Lupa password MySQL | Default: `helpdesk` / `secret` (lihat `docker-compose.yml`) |
+| Reset database | `make fresh` atau `docker compose exec app php artisan migrate:fresh --seed` |
+| Akses Adminer | Buka `http://localhost:8080`, Server: `db`, User: `helpdesk`, Pass: `secret` |
+| Koneksi dari host | Host: `127.0.0.1`, Port: `3306`, User: `helpdesk`, Pass: `secret` |
