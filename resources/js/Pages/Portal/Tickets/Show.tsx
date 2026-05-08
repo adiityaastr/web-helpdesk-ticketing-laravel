@@ -1,5 +1,5 @@
-import React, { FormEvent, useState } from 'react';
-import { Link, useForm, usePage, router } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Link, usePage, router } from '@inertiajs/react';
 import PortalLayout from '../Layout';
 import Icon from '@/Components/Icon';
 import FlashMessage from '@/Components/FlashMessage';
@@ -41,33 +41,109 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
     const { flash } = usePage<{ flash: { success?: string; error?: string }; auth: { user: { roles?: string[] } | null } }>().props;
     const staffOrAdmin = (usePage().props.auth.user?.roles ?? []).includes('staff');
     const [ratingValue, setRatingValue] = useState(ticket.rating ?? 0);
-    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
     const [showReject, setShowReject] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showConfirmResolutionDialog, setShowConfirmResolutionDialog] = useState(false);
     const [showRatingDialog, setShowRatingDialog] = useState(false);
-
-    const commentForm = useForm({ message: '', attachments: [] as File[] });
-    const ratingForm = useForm({ rating: ticket.rating ?? 5, rating_comment: ticket.rating_comment ?? '' });
-    const cancelForm = useForm({});
-    const confirmForm = useForm({});
-    const rejectForm = useForm({ reason: '' });
+    const [commentProcessing, setCommentProcessing] = useState(false);
+    const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
+    const [ratingProcessing, setRatingProcessing] = useState(false);
+    const [ratingData, setRatingData] = useState({ rating: ticket.rating ?? 5, rating_comment: ticket.rating_comment ?? '' });
+    const [cancelProcessing, setCancelProcessing] = useState(false);
+    const [confirmProcessing, setConfirmProcessing] = useState(false);
+    const [rejectProcessing, setRejectProcessing] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
 
     const ticketPath = `/portal/tickets/${ticket.id}`;
 
     const handleCommentSubmit = (data: { message: string; attachments: File[] }) => {
-        commentForm.setData('message', data.message);
-        commentForm.setData('attachments', data.attachments);
-        commentForm.post(`${ticketPath}/comments`, {
-            onSuccess: () => router.reload({ only: ['ticket', 'comments'] }),
+        console.log('Comment data:', data);
+        setCommentProcessing(true);
+        setCommentErrors({});
+        
+        // Create FormData manually for proper file handling
+        const formData = new FormData();
+        formData.append('message', data.message);
+        
+        // Append files properly
+        data.attachments.forEach((file, index) => {
+            formData.append(`attachments[${index}]`, file);
+        });
+        
+        // Use router.post with FormData
+        router.post(`${ticketPath}/comments`, formData as any, {
+            onSuccess: () => {
+                setCommentProcessing(false);
+                router.reload({ only: ['ticket', 'comments'] });
+            },
+            onError: (errors) => {
+                console.log('Comment errors:', errors);
+                setCommentErrors(errors as Record<string, string>);
+                setCommentProcessing(false);
+            },
         });
     };
 
-    const submitRating = (e: FormEvent) => {
-        e.preventDefault();
-        ratingForm.post(`${ticketPath}/rate`, {
-            onSuccess: () => router.reload({ only: ['ticket'] }),
+    const submitRating = () => {
+        setRatingProcessing(true);
+        const formData = new FormData();
+        formData.append('rating', String(ratingValue));
+        formData.append('rating_comment', ratingData.rating_comment);
+        
+        router.post(`${ticketPath}/rate`, formData as any, {
+            onSuccess: () => {
+                setShowRatingDialog(false);
+                setRatingProcessing(false);
+                router.get(ticketPath);
+            },
+            onError: () => {
+                setRatingProcessing(false);
+            },
+        });
+    };
+
+    const handleConfirmResolution = () => {
+        setConfirmProcessing(true);
+        router.post(`${ticketPath}/confirm`, {}, {
+            onSuccess: () => {
+                setConfirmProcessing(false);
+                setShowConfirmResolutionDialog(false);
+                setShowRatingDialog(true);
+            },
+            onError: () => {
+                setConfirmProcessing(false);
+            },
+        });
+    };
+
+    const handleRejectResolution = () => {
+        setRejectProcessing(true);
+        router.post(`${ticketPath}/reject`, { reason: rejectReason }, {
+            onSuccess: () => {
+                setRejectProcessing(false);
+                setShowReject(false);
+                setRejectReason('');
+                router.reload({ only: ['ticket'] });
+            },
+            onError: () => {
+                setRejectProcessing(false);
+            },
+        });
+    };
+
+    const handleCancelTicket = () => {
+        setCancelProcessing(true);
+        router.post(`${ticketPath}/cancel`, {}, {
+            onSuccess: () => {
+                setCancelProcessing(false);
+                setShowCancelConfirm(false);
+                router.reload({ only: ['ticket'] });
+            },
+            onError: () => {
+                setCancelProcessing(false);
+            },
         });
     };
 
@@ -86,7 +162,7 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                 </div>
                 <div className="flex items-center gap-2">
                     {ticket.is_cancellable && (
-                        <button onClick={() => setShowCancelConfirm(true)} className="rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50" disabled={cancelForm.processing}>Batalkan</button>
+                        <button onClick={() => setShowCancelConfirm(true)} className="rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50" disabled={cancelProcessing}>Batalkan</button>
                     )}
                     {ticket.is_deletable && (
                         <button onClick={() => setShowDeleteConfirm(true)} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Hapus</button>
@@ -108,8 +184,8 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                         comments={comments}
                         isLocked={commentLocked}
                         onSubmit={handleCommentSubmit}
-                        processing={commentForm.processing}
-                        errors={commentForm.errors}
+                        processing={commentProcessing}
+                        errors={commentErrors}
                     />
 
                     {ticket.status === 'resolved' && !ticket.resolved_confirmed_at && (
@@ -118,31 +194,32 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                             <p className="mb-4 text-sm text-teal-700">Admin telah menyelesaikan tiket ini. Apakah permasalahan Anda sudah diperbaiki?</p>
                             {!showReject ? (
                                 <div className="flex gap-3">
-                                    <button type="button" onClick={() => confirmForm.post(`${ticketPath}/confirm`)} className="rounded-md bg-teal-600 px-5 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={confirmForm.processing}>Ya, Sudah Selesai</button>
+                                    <button type="button" onClick={() => setShowConfirmResolutionDialog(true)} className="rounded-md bg-teal-600 px-5 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">Ya, Sudah Selesai</button>
                                     <button type="button" onClick={() => setShowReject(true)} className="rounded-md border border-rose-200 bg-white px-5 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50">Belum, Masih Ada Masalah</button>
                                 </div>
                             ) : (
-                                <form onSubmit={(e) => { e.preventDefault(); rejectForm.post(`${ticketPath}/reject`); }} className="space-y-3">
-                                    <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" rows={3} placeholder="Jelaskan kendala yang masih terjadi..." value={rejectForm.data.reason} onChange={(e) => rejectForm.setData('reason', e.target.value)} />
-                                    {rejectForm.errors.reason && <p className="text-xs text-rose-600">{rejectForm.errors.reason}</p>}
+                                <form onSubmit={(e) => { e.preventDefault(); handleRejectResolution(); }} className="space-y-3">
+                                    <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" rows={3} placeholder="Jelaskan kendala yang masih terjadi..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
                                     <div className="flex gap-3">
-                                        <button type="submit" className="rounded-md bg-rose-600 px-5 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50" disabled={rejectForm.processing}>Kirim & Buka Kembali</button>
-                                        <button type="button" onClick={() => { setShowReject(false); rejectForm.reset('reason'); }} className="rounded-md border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</button>
+                                        <button type="submit" className="rounded-md bg-rose-600 px-5 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50" disabled={rejectProcessing}>Kirim & Buka Kembali</button>
+                                        <button type="button" onClick={() => { setShowReject(false); setRejectReason(''); }} className="rounded-md border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</button>
                                     </div>
                                 </form>
                             )}
                         </div>
                     )}
 
-                    {ticket.status === 'resolved' && !ticket.rating && (
+                    {ticket.status === 'resolved' && ticket.resolved_confirmed_at && !ticket.rating && (
                         <div className="rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="mb-3 text-sm font-semibold text-slate-900">Beri Rating</h2>
                             <p className="mb-4 text-sm text-slate-500">Tiket Anda sudah diselesaikan. Beri penilaian untuk layanan kami.</p>
-                            <form onSubmit={submitRating} className="space-y-4">
-                                <RatingStars rating={ratingValue} onChange={(r) => { setRatingValue(r); ratingForm.setData('rating', r); }} />
-                                <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" rows={3} placeholder="Komentar tambahan (opsional)" value={ratingForm.data.rating_comment} onChange={(e) => ratingForm.setData('rating_comment', e.target.value)} />
-                                <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={ratingForm.processing}>Kirim Rating</button>
-                            </form>
+                            <div className="space-y-4">
+                                <div>
+                                    <RatingStars rating={ratingValue} onChange={setRatingValue} />
+                                </div>
+                                <textarea className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" rows={3} placeholder="Komentar tambahan (opsional)" value={ratingData.rating_comment} onChange={(e) => setRatingData({ ...ratingData, rating_comment: e.target.value })} />
+                                <button type="button" onClick={submitRating} className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={ratingProcessing}>Kirim Rating</button>
+                            </div>
                         </div>
                     )}
 
@@ -197,8 +274,56 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                 </div>
             </div>
 
-            <ConfirmDialog open={showCancelConfirm} title="Batalkan Tiket" message="Yakin ingin membatalkan tiket ini? Tindakan ini tidak dapat diurungkan." confirmLabel="Batalkan Tiket" variant="danger" onConfirm={() => { cancelForm.post(`${ticketPath}/cancel`); setShowCancelConfirm(false); }} onCancel={() => setShowCancelConfirm(false)} />
+            <ConfirmDialog open={showCancelConfirm} title="Batalkan Tiket" message="Yakin ingin membatalkan tiket ini? Tindakan ini tidak dapat diurungkan." confirmLabel="Batalkan Tiket" variant="danger" onConfirm={handleCancelTicket} onCancel={() => setShowCancelConfirm(false)} />
             <ConfirmDialog open={showDeleteConfirm} title="Hapus Tiket" message="Yakin ingin menghapus tiket ini? Tindakan ini tidak dapat diurungkan." confirmLabel="Hapus" variant="danger" onConfirm={() => { router.delete(ticketPath); setShowDeleteConfirm(false); }} onCancel={() => setShowDeleteConfirm(false)} />
+            
+            <ConfirmDialog 
+                open={showConfirmResolutionDialog} 
+                title="Konfirmasi Penyelesaian Tiket" 
+                message="Apakah Anda yakin bahwa masalah pada tiket ini sudah diselesaikan dengan baik? Setelah dikonfirmasi, tiket akan ditutup dan Anda akan diminta untuk memberikan rating." 
+                confirmLabel="Ya, Konfirmasi Selesai" 
+                variant="success"
+                onConfirm={handleConfirmResolution}
+                onCancel={() => setShowConfirmResolutionDialog(false)} 
+            />
+
+            {showRatingDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) setShowRatingDialog(false); }}>
+                    <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-900">Beri Rating Layanan</h3>
+                            <button onClick={() => setShowRatingDialog(false)} className="text-slate-400 hover:text-slate-600">
+                                <Icon name="close" size={20} />
+                            </button>
+                        </div>
+                        <p className="mb-4 text-sm text-slate-600">Tiket Anda telah dikonfirmasi selesai. Berikan penilaian untuk layanan yang Anda terima.</p>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">Rating Anda</label>
+                                <RatingStars rating={ratingValue} onChange={setRatingValue} size={32} />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-slate-700">Komentar (Opsional)</label>
+                                <textarea 
+                                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" 
+                                    rows={3} 
+                                    placeholder="Bagikan pengalaman Anda..." 
+                                    value={ratingData.rating_comment} 
+                                    onChange={(e) => setRatingData({ ...ratingData, rating_comment: e.target.value })} 
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <button type="button" onClick={submitRating} className="flex-1 rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={ratingProcessing}>
+                                    Kirim Rating
+                                </button>
+                                <button type="button" onClick={() => setShowRatingDialog(false)} className="rounded-md border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                    Nanti Saja
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </PortalLayout>
     );
 });

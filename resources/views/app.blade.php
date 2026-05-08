@@ -10,8 +10,11 @@
             .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
             #nprogress .bar { background: #0d9488 !important; height: 3px !important; }
             #nprogress .peg { box-shadow: 0 0 8px #0d9488, 0 0 4px #0d9488 !important; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; }
+            #app { min-height: 100vh; }
+            #app > div { display: flex; min-height: 100vh; }
         </style>
-        @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx'])
         @inertiaHead
     </head>

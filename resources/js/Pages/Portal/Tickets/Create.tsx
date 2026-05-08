@@ -1,7 +1,8 @@
 import React from 'react';
-import { useForm } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import PortalLayout from '../Layout';
 import TicketForm, { Category, TicketFormData } from '../../../Components/TicketForm';
+import { useState } from 'react';
 
 type Props = {
     categories: Category[] | null;
@@ -9,22 +10,13 @@ type Props = {
 };
 
 export default React.memo(function PortalTicketCreate({ categories = [], priorities = [] }: Props) {
-    const { post, processing, errors } = useForm<{
-        category_id: string;
-        title: string;
-        description: string;
-        priority: string;
-        attachments: File[];
-    }>({
-        category_id: '',
-        title: '',
-        description: '',
-        priority: 'medium',
-        attachments: [],
-    });
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleSubmit = (data: TicketFormData) => {
         console.log('Form data received:', data);
+        setProcessing(true);
+        setErrors({});
         
         // Create FormData manually for proper file handling
         const formData = new FormData();
@@ -38,8 +30,17 @@ export default React.memo(function PortalTicketCreate({ categories = [], priorit
             formData.append(`attachments[${index}]`, file);
         });
         
-        // Use post with FormData directly
-        post('/portal/tickets', formData as any);
+        // Use router.post with FormData
+        router.post('/portal/tickets', formData as any, {
+            onSuccess: () => {
+                setProcessing(false);
+            },
+            onError: (errors) => {
+                console.log('Errors:', errors);
+                setErrors(errors as Record<string, string>);
+                setProcessing(false);
+            },
+        });
     };
 
     return (

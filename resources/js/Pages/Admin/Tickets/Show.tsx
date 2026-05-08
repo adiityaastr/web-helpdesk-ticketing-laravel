@@ -49,6 +49,8 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showInternal, setShowInternal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [commentProcessing, setCommentProcessing] = useState(false);
+    const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
     const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
 
     const updateForm = useForm({
@@ -56,8 +58,6 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
         status: ticket.status && ticket.status !== 'open' ? ticket.status : '',
         assigned_to: String(ticket.assignee?.id ?? ''),
     });
-
-    const commentForm = useForm({ message: '', is_internal: false, attachments: [] as File[] });
 
     const submitUpdate = (e: FormEvent) => {
         e.preventDefault();
@@ -67,11 +67,27 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     };
 
     const handleCommentSubmit = (data: { message: string; is_internal?: boolean; attachments: File[] }) => {
-        commentForm.setData('message', data.message);
-        commentForm.setData('is_internal', data.is_internal ?? false);
-        commentForm.setData('attachments', data.attachments);
-        commentForm.post(`/admin/tickets/${ticket.id}/comments`, {
-            onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
+        setCommentProcessing(true);
+        setCommentErrors({});
+
+        const formData = new FormData();
+        formData.append('message', data.message);
+        if (data.is_internal) {
+            formData.append('is_internal', '1');
+        }
+        data.attachments.forEach((file, index) => {
+            formData.append(`attachments[${index}]`, file);
+        });
+
+        router.post(`/admin/tickets/${ticket.id}/comments`, formData as any, {
+            onSuccess: () => {
+                setCommentProcessing(false);
+                router.reload({ only: ['ticket', 'comments', 'activityLogs'] });
+            },
+            onError: (errors) => {
+                setCommentErrors(errors as Record<string, string>);
+                setCommentProcessing(false);
+            },
         });
     };
 
@@ -101,35 +117,46 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                         <p className="whitespace-pre-wrap text-sm text-slate-600">{ticket.description}</p>
                     </div>
 
-                    <form onSubmit={submitUpdate} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
-                        <h2 className="text-sm font-semibold text-slate-900">Kelola Tiket</h2>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
-                                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.status} onChange={(e) => updateForm.setData('status', e.target.value)}>
-                                    <option value="" disabled>Pilih status...</option>
-                                    {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
-                                </select>
-                                {updateForm.errors.status && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.status}</p>}
+                    {!commentLocked && (
+                        <form onSubmit={submitUpdate} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+                            <h2 className="text-sm font-semibold text-slate-900">Kelola Tiket</h2>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Status</label>
+                                    <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.status} onChange={(e) => updateForm.setData('status', e.target.value)}>
+                                        <option value="" disabled>Pilih status...</option>
+                                        {statuses.map((s) => <option key={s} value={s}>{statusLabel[s] ?? s}</option>)}
+                                    </select>
+                                    {updateForm.errors.status && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.status}</p>}
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Prioritas</label>
+                                    <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.priority} onChange={(e) => updateForm.setData('priority', e.target.value)}>
+                                        {priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)}
+                                    </select>
+                                    {updateForm.errors.priority && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.priority}</p>}
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Tugaskan ke</label>
+                                    <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.assigned_to} onChange={(e) => updateForm.setData('assigned_to', e.target.value)}>
+                                        <option value="">Belum ditugaskan</option>
+                                        {staffUsers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                    {updateForm.errors.assigned_to && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.assigned_to}</p>}
+                                </div>
                             </div>
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium text-slate-700">Prioritas</label>
-                                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.priority} onChange={(e) => updateForm.setData('priority', e.target.value)}>
-                                    {priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)}
-                                </select>
-                                {updateForm.errors.priority && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.priority}</p>}
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-sm font-medium text-slate-700">Tugaskan ke</label>
-                                <select className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none" value={updateForm.data.assigned_to} onChange={(e) => updateForm.setData('assigned_to', e.target.value)}>
-                                    <option value="">Belum ditugaskan</option>
-                                    {staffUsers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                                {updateForm.errors.assigned_to && <p className="mt-1 text-xs text-rose-600">{updateForm.errors.assigned_to}</p>}
+                            <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={updateForm.processing}>Simpan Perubahan</button>
+                        </form>
+                    )}
+
+                    {commentLocked && (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Icon name="lock" size={16} />
+                                Tiket sudah ditutup dan tidak dapat diubah lagi.
                             </div>
                         </div>
-                        <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={updateForm.processing}>Simpan Perubahan</button>
-                    </form>
+                    )}
 
                     <CommentSection
                         comments={comments}
@@ -137,15 +164,15 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                         isInternal={showInternal}
                         onSubmit={handleCommentSubmit}
                         onToggleInternal={setShowInternal}
-                        processing={commentForm.processing}
-                        errors={commentForm.errors}
+                        processing={commentProcessing}
+                        errors={commentErrors}
                     />
 
-                    {ticket.rating && (
+                    {ticket.rating != null && (
                         <div className="rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="mb-2 text-sm font-semibold text-slate-900">Rating Pengguna</h2>
                             <div className="flex items-center gap-1">
-                                <RatingStars rating={ticket.rating ?? 0} readOnly size={20} />
+                                <RatingStars rating={ticket.rating} readOnly size={20} />
                                 <span className="ml-2 text-sm text-slate-500">({ticket.rating}/5)</span>
                             </div>
                             {ticket.rating_comment && <p className="mt-2 text-sm text-slate-600">{ticket.rating_comment}</p>}
