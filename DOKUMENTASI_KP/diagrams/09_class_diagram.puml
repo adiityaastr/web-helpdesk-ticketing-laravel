@@ -1,0 +1,122 @@
+@startuml 09_class_diagram
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam class {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+}
+
+class User {
+    -id: int
+    -name: string
+    -email: string
+    -password: string
+    --
+    +create(): void
+    +update(): void
+    +delete(): void
+    +hasRole(role): bool
+    +hasPermission(permission): bool
+}
+
+class Ticket {
+    -id: int
+    -uuid: string
+    -user_id: int
+    -category_id: int
+    -title: string
+    -description: string
+    -priority: enum
+    -status: enum
+    -saw_score: float
+    --
+    +create(): void
+    +update(): void
+    +changeStatus(status): void
+    +canTransitionTo(status): bool
+    +calculateSAW(): float
+}
+
+class Comment {
+    -id: int
+    -ticket_id: int
+    -user_id: int
+    -message: string
+    -is_internal: bool
+    --
+    +create(): void
+    +update(): void
+    +delete(): void
+}
+
+class Category {
+    -id: int
+    -name: string
+    -slug: string
+    --
+    +create(): void
+    +update(): void
+    +delete(): void
+}
+
+class Notification {
+    -id: uuid
+    -type: string
+    -notifiable_id: int
+    -data: json
+    -read_at: timestamp
+    --
+    +create(): void
+    +markAsRead(): void
+    +send(): void
+}
+
+class TicketController {
+    -ticketService: TicketService
+    --
+    +index(): void
+    +show(id): void
+    +store(request): void
+    +update(id, request): void
+    +destroy(id): void
+}
+
+class SawService {
+    -configRepository: SawConfigRepository
+    -cache: Cache
+    --
+    +calculateScore(ticket): float
+    +normalize(value, max): float
+    +weightedSum(criteria): float
+    +cacheScore(ticket, score): void
+}
+
+class TicketPolicy {
+    --
+    +view(user, ticket): bool
+    +create(user): bool
+    +update(user, ticket): bool
+    +delete(user, ticket): bool
+    +comment(user, ticket): bool
+}
+
+class NotificationService {
+    -notificationRepository: NotificationRepository
+    --
+    +send(user, notification): void
+    +sendBatch(users, notification): void
+    +markAsRead(notification): void
+}
+
+User "1" -- "*" Ticket : creates
+User "1" -- "*" Comment : writes
+Ticket "1" -- "*" Comment : has
+Category "1" -- "*" Ticket : categorizes
+User "1" -- "*" Notification : receives
+
+TicketController --> SawService : uses
+TicketController --> TicketPolicy : checks
+TicketController --> NotificationService : uses
+
+@enduml

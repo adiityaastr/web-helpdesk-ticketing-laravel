@@ -49,7 +49,7 @@ class TicketController extends Controller
     public function create(): Response
     {
         return Inertia::render('Portal/Tickets/Create', [
-            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name', 'slug')->orderBy('name')->get()->toArray()),
+            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->withoutTrashed()->select('id', 'name', 'slug')->orderBy('name')->get()->toArray()),
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);
     }

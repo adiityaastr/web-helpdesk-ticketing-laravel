@@ -1,0 +1,87 @@
+@startuml 03_activity_tiket
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam activity {
+    BackgroundColor<<start>> #4CAF50
+    BackgroundColor<<end>> #F44336
+    BackgroundColor<<process>> #2196F3
+    BackgroundColor<<decision>> #FFC107
+    BorderColor #333
+}
+
+start
+:Customer buka form buat tiket;
+:Isi judul, deskripsi, kategori;
+:Upload lampiran (optional);
+:Submit form;
+
+if (Validasi input?) then (Gagal)
+    :Tampilkan error message;
+    :Customer perbaiki input;
+    :Submit ulang;
+else (Berhasil)
+    :Create Ticket di database;
+    :Generate UUID tiket;
+    :Set status = "open";
+    :Set priority = default;
+    :Dispatch TicketCreated event;
+    
+    :Hitung SAW score;
+    :Cache score ke Redis;
+    
+    :Send notification ke admin;
+    :Log activity;
+    
+    :Return success response;
+    :Redirect ke detail tiket;
+    
+    :Admin melihat tiket baru;
+    :Review tiket;
+    
+    if (Assign ke staff?) then (Ya)
+        :Assign tiket ke staff;
+        :Set assigned_to = staff_id;
+        :Send notification ke staff;
+        :Update status = "in_progress";
+    else (Tidak)
+        :Tiket tetap unassigned;
+    endif
+    
+    :Staff melihat tiket;
+    :Baca deskripsi & lampiran;
+    :Add comment (public/internal);
+    
+    if (Tiket selesai?) then (Ya)
+        :Update status = "resolved";
+        :Set resolved_at = now;
+        :Send notification ke customer;
+        :Customer melihat notifikasi;
+        
+        if (Customer confirm selesai?) then (Ya)
+            :Update status = "closed";
+            :Set resolved_confirmed_at = now;
+            :Tampilkan form rating;
+            :Customer beri rating 1-5;
+            :Simpan rating & comment;
+            :Tiket selesai;
+        else (Tidak)
+            :Update status = "in_progress";
+            :Staff lanjut handle tiket;
+        endif
+    else (Tidak)
+        :Staff lanjut handle tiket;
+    endif
+    
+    if (Customer batalkan?) then (Ya)
+        :Update status = "cancelled";
+        :Set cancelled_at = now;
+        :Send notification ke staff;
+    else (Tidak)
+        :Tiket normal flow;
+    endif
+endif
+
+stop
+
+@enduml

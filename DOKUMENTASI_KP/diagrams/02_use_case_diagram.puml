@@ -1,0 +1,97 @@
+@startuml 02_use_case_diagram
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+actor "Customer" as customer
+actor "Staff" as staff
+actor "Admin" as admin
+actor "System" as system
+
+rectangle "Helpdesk Ticketing System" {
+    usecase "UC1: Create Ticket" as uc1
+    usecase "UC2: View Ticket" as uc2
+    usecase "UC3: Add Comment" as uc3
+    usecase "UC4: Upload Attachment" as uc4
+    usecase "UC5: Rate Ticket" as uc5
+    usecase "UC6: Cancel Ticket" as uc6
+    
+    usecase "UC7: Assign Ticket" as uc7
+    usecase "UC8: Update Status" as uc8
+    usecase "UC9: Add Internal Comment" as uc9
+    usecase "UC10: View Dashboard" as uc10
+    usecase "UC11: Manage User" as uc11
+    usecase "UC12: Manage Category" as uc12
+    
+    usecase "UC13: Configure SAW" as uc13
+    usecase "UC14: View Analytics" as uc14
+    usecase "UC15: Manage Knowledge Base" as uc15
+    
+    usecase "UC16: Send Notification" as uc16
+    usecase "UC17: Calculate SAW Score" as uc17
+    usecase "UC18: Log Activity" as uc18
+}
+
+customer --> uc1
+customer --> uc2
+customer --> uc3
+customer --> uc4
+customer --> uc5
+customer --> uc6
+
+staff --> uc2
+staff --> uc3
+staff --> uc7
+staff --> uc8
+staff --> uc9
+staff --> uc10
+
+admin --> uc7
+admin --> uc8
+admin --> uc10
+admin --> uc11
+admin --> uc12
+admin --> uc13
+admin --> uc14
+admin --> uc15
+
+system --> uc16
+system --> uc17
+system --> uc18
+
+uc1 .> uc16 : <<include>>
+uc1 .> uc17 : <<include>>
+uc1 .> uc18 : <<include>>
+
+uc8 .> uc16 : <<include>>
+uc8 .> uc17 : <<include>>
+uc8 .> uc18 : <<include>>
+
+uc3 .> uc18 : <<include>>
+
+note right of uc1
+  Customer membuat tiket baru
+  dengan kategori, prioritas, lampiran
+end note
+
+note right of uc7
+  Staff/Admin assign tiket
+  ke staff yang tepat
+end note
+
+note right of uc13
+  Admin konfigurasi bobot
+  kriteria SAW (C1-C5)
+end note
+
+note right of uc16
+  Sistem kirim notifikasi
+  ke user yang terkait
+end note
+
+note right of uc17
+  Sistem hitung skor SAW
+  berdasarkan 5 kriteria
+end note
+
+@enduml

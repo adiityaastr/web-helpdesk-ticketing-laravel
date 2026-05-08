@@ -179,7 +179,11 @@ export default React.memo(function TicketForm({
                         onChange={(e) => setField('category_id', e.target.value)}
                     >
                         <option value="">Pilih kategori</option>
-                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {categories && categories.length > 0 ? (
+                            categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)
+                        ) : (
+                            <option disabled>Tidak ada kategori tersedia</option>
+                        )}
                     </select>
                     {errors.category_id && <p className="mt-1 text-xs text-rose-600">{errors.category_id}</p>}
                 </div>
@@ -214,7 +218,11 @@ export default React.memo(function TicketForm({
                         value={data.priority}
                         onChange={(e) => setField('priority', e.target.value)}
                     >
-                        {priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)}
+                        {priorities && priorities.length > 0 ? (
+                            priorities.map((p) => <option key={p} value={p}>{priorityLabel[p] ?? p}</option>)
+                        ) : (
+                            <option value="medium">Medium</option>
+                        )}
                     </select>
                 </div>
 

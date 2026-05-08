@@ -1,0 +1,72 @@
+@startuml 04_activity_saw
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+start
+:Request list tiket;
+:Check Redis cache;
+
+if (Cache hit?) then (Ya)
+    :Return cached SAW scores;
+    :Sort tiket by score DESC;
+else (Tidak)
+    :Ambil semua tiket dari DB;
+    :Ambil SAW config dari DB;
+    
+    partition "Normalisasi Data" {
+        :Extract nilai C1 (Priority);
+        :Extract nilai C2 (SLA Urgency);
+        :Extract nilai C3 (Wait Time);
+        :Extract nilai C4 (Customer Activity);
+        :Extract nilai C5 (Complexity);
+        
+        :Normalisasi C1 (benefit);
+        :r1 = C1 / max(C1);
+        
+        :Normalisasi C2 (benefit);
+        :r2 = C2 / max(C2);
+        
+        :Normalisasi C3 (cost);
+        :r3 = min(C3) / C3;
+        
+        :Normalisasi C4 (benefit);
+        :r4 = C4 / max(C4);
+        
+        :Normalisasi C5 (benefit);
+        :r5 = C5 / max(C5);
+    }
+    
+    partition "Weighted Sum" {
+        :Ambil bobot W1, W2, W3, W4, W5;
+        :Hitung V(i) = (W1*r1) + (W2*r2) + (W3*r3) + (W4*r4) + (W5*r5);
+        :Simpan V(i) untuk setiap tiket;
+    }
+    
+    partition "Ranking" {
+        :Sort tiket by V(i) DESC;
+        :Assign rank 1, 2, 3, ...;
+    }
+    
+    :Cache SAW scores ke Redis;
+    :Set TTL = 60 detik;
+endif
+
+:Return sorted tiket dengan score;
+:Render di frontend;
+:Tampilkan ranking & score;
+
+stop
+
+note right
+  SAW Formula:
+  V(i) = Σ(w_j × r_ij)
+  
+  Dimana:
+  - w_j = bobot kriteria j
+  - r_ij = nilai normalisasi
+  - i = tiket ke-i
+  - j = kriteria ke-j
+end note
+
+@enduml

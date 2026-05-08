@@ -1,0 +1,62 @@
+@startuml 05_flowchart_login
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+start
+:User buka halaman login;
+:Input email & password;
+:Click tombol Login;
+
+:Validasi input;
+if (Email & password valid?) then (Tidak)
+    :Tampilkan error message;
+    :User input ulang;
+else (Ya)
+    :Query user by email;
+    
+    if (User ditemukan?) then (Tidak)
+        :Tampilkan "Email tidak terdaftar";
+        :User input ulang;
+    else (Ya)
+        :Verify password dengan bcrypt;
+        
+        if (Password benar?) then (Tidak)
+            :Tampilkan "Password salah";
+            :User input ulang;
+        else (Ya)
+            :Check user status;
+            
+            if (User aktif?) then (Tidak)
+                :Tampilkan "User tidak aktif";
+            else (Ya)
+                :Generate session token;
+                :Store session di Redis;
+                :Set session lifetime = 120 menit;
+                
+                :Generate API token (Sanctum);
+                :Store token di database;
+                
+                :Create auth cookie;
+                :Set cookie secure & httpOnly;
+                
+                :Log login activity;
+                
+                :Redirect ke dashboard;
+                :Tampilkan welcome message;
+            endif
+        endif
+    endif
+endif
+
+stop
+
+note right
+  Security:
+  - Password hashing (bcrypt)
+  - Session storage (Redis)
+  - Secure cookie (httpOnly)
+  - Activity logging
+end note
+
+@enduml

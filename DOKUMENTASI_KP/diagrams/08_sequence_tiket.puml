@@ -1,0 +1,55 @@
+@startuml 08_sequence_tiket
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+actor Customer
+participant "Browser\n(React)" as browser
+participant "Nginx" as nginx
+participant "Laravel\nController" as controller
+participant "TicketService" as service
+participant "Database\n(MySQL)" as db
+participant "Redis\nCache" as cache
+participant "Queue\nWorker" as queue
+participant "Notification" as notif
+
+Customer -> browser: Buka form buat tiket
+browser -> browser: Render form
+Customer -> browser: Isi data & submit
+browser -> nginx: POST /tickets
+nginx -> controller: Route ke TicketController@store
+controller -> controller: Validasi input
+controller -> service: createTicket(data)
+service -> db: INSERT ticket
+db -> service: ticket_id
+service -> cache: calculateSAW(ticket)
+cache -> service: saw_score
+service -> db: UPDATE ticket SAW score
+service -> queue: Dispatch TicketCreatedJob
+queue -> queue: Queue job
+service -> controller: return ticket
+controller -> browser: Inertia response
+browser -> browser: Render success
+browser -> Customer: Tampilkan detail tiket
+
+queue -> notif: Execute SendNotificationJob
+notif -> db: INSERT notification
+notif -> db: UPDATE notification read_at
+notif -> browser: Broadcast notification (optional)
+browser -> Customer: Tampilkan notifikasi
+
+note over service
+  SAW Calculation:
+  - Normalisasi 5 kriteria
+  - Weighted sum
+  - Cache 60 detik
+end note
+
+note over queue
+  Async Processing:
+  - Send notification
+  - Send email
+  - Log activity
+end note
+
+@enduml

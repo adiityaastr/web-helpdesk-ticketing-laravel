@@ -1,0 +1,103 @@
+@startuml 01_arsitektur_sistem
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v14.0/dist
+!include AWSPUML/AmazonRDS.puml
+!include AWSPUML/ElastiCache.puml
+
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam component {
+    BackgroundColor<<web>> #E1F5FE
+    BackgroundColor<<app>> #F3E5F5
+    BackgroundColor<<db>> #E8F5E9
+    BackgroundColor<<cache>> #FFF3E0
+    BackgroundColor<<queue>> #FCE4EC
+    BorderColor #333
+}
+
+package "CLIENT LAYER" {
+    component [Browser\n(React 19)] as browser <<web>>
+}
+
+package "PRESENTATION LAYER" {
+    component [Nginx 1.26\nWeb Server] as nginx <<web>>
+}
+
+package "APPLICATION LAYER" {
+    component [PHP-FPM 8.3\nLaravel 13] as phpfpm <<app>>
+    component [Services\n(SAW, Notification)] as services <<app>>
+    component [Controllers\n(Ticket, User, etc)] as controllers <<app>>
+}
+
+package "DATA LAYER" {
+    component [MySQL 8.0\nDatabase] as mysql <<db>>
+}
+
+package "CACHE LAYER" {
+    component [Redis 7\nCache & Session] as redis <<cache>>
+}
+
+package "QUEUE LAYER" {
+    component [Redis Queue\nWorker] as queue <<queue>>
+}
+
+package "EXTERNAL SERVICES" {
+    component [MailHog\nEmail Testing] as mailhog
+    component [Adminer\nDB Management] as adminer
+}
+
+browser --> nginx : HTTP/HTTPS
+nginx --> phpfpm : FastCGI
+phpfpm --> controllers : Route
+controllers --> services : Business Logic
+services --> mysql : Query
+services --> redis : Cache/Session
+phpfpm --> queue : Dispatch Job
+queue --> redis : Get Job
+queue --> mysql : Store Result
+phpfpm --> mailhog : Send Email
+adminer --> mysql : Manage DB
+
+note right of browser
+  React Components
+  Tailwind CSS
+  Inertia.js Client
+end note
+
+note right of nginx
+  Reverse Proxy
+  Static Assets
+  SSL/TLS
+  Gzip Compression
+end note
+
+note right of phpfpm
+  Request Handler
+  Middleware
+  Policy Check
+end note
+
+note right of services
+  SawService
+  NotificationService
+  TicketService
+end note
+
+note right of mysql
+  8 Tables
+  InnoDB Engine
+  utf8mb4 Charset
+end note
+
+note right of redis
+  Session Storage
+  Query Cache
+  SAW Scores
+end note
+
+note right of queue
+  Async Jobs
+  Notification
+  Email Sending
+end note
+
+@enduml

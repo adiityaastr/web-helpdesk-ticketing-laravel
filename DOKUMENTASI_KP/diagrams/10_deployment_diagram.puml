@@ -1,0 +1,102 @@
+@startuml 10_deployment_diagram
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam node {
+    BackgroundColor #E8F5E9
+    BorderColor #388E3C
+}
+
+node "Docker Host" as host {
+    node "Nginx Container" as nginx {
+        artifact "nginx:1.26-alpine" as nginx_img
+        artifact "default.conf" as nginx_conf
+    }
+    
+    node "PHP-FPM Container" as phpfpm {
+        artifact "php:8.3-fpm-alpine" as php_img
+        artifact "Laravel 13" as laravel
+        artifact "Inertia.js" as inertia
+    }
+    
+    node "MySQL Container" as mysql {
+        artifact "mysql:8.0" as mysql_img
+        artifact "Database" as db_data
+    }
+    
+    node "Redis Container" as redis {
+        artifact "redis:7-alpine" as redis_img
+        artifact "Cache & Session" as redis_data
+    }
+    
+    node "Queue Worker Container" as queue {
+        artifact "php:8.3-fpm-alpine" as queue_img
+        artifact "Queue Worker" as queue_worker
+    }
+    
+    node "MailHog Container" as mailhog {
+        artifact "mailhog/mailhog" as mailhog_img
+    }
+    
+    node "Adminer Container" as adminer {
+        artifact "adminer:4.8.1" as adminer_img
+    }
+}
+
+node "Client Machine" as client {
+    artifact "Browser" as browser
+}
+
+node "External Services" as external {
+    artifact "GitHub" as github
+    artifact "Docker Hub" as dockerhub
+}
+
+browser --> nginx : HTTP:8000
+nginx --> phpfpm : FastCGI:9000
+phpfpm --> mysql : TCP:3306
+phpfpm --> redis : TCP:6379
+phpfpm --> queue : Dispatch Job
+queue --> redis : Get Job
+queue --> mysql : Store Result
+phpfpm --> mailhog : SMTP:1025
+adminer --> mysql : TCP:3306
+
+nginx_img -.-> dockerhub : pull
+php_img -.-> dockerhub : pull
+mysql_img -.-> dockerhub : pull
+redis_img -.-> dockerhub : pull
+laravel -.-> github : clone
+
+note right of nginx
+  Port Mapping:
+  8000 -> 80
+end note
+
+note right of phpfpm
+  Port Mapping:
+  internal -> 9000
+end note
+
+note right of mysql
+  Port Mapping:
+  3306 -> 3306
+end note
+
+note right of redis
+  Port Mapping:
+  6379 -> 6379
+end note
+
+note right of mailhog
+  Port Mapping:
+  8025 -> 8025
+  1025 -> 1025
+end note
+
+note right of adminer
+  Port Mapping:
+  8080 -> 8080
+end note
+
+@enduml

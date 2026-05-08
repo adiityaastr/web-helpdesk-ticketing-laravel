@@ -1,0 +1,144 @@
+@startuml 07_er_diagram
+!define DIRECTION top to bottom
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam entity {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+}
+
+entity "users" as users {
+    *id : INT
+    --
+    name : VARCHAR
+    email : VARCHAR (UNIQUE)
+    password : VARCHAR
+    phone : VARCHAR
+    department : VARCHAR
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "roles" as roles {
+    *id : INT
+    --
+    name : VARCHAR (UNIQUE)
+    guard_name : VARCHAR
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "model_has_roles" as model_has_roles {
+    *model_id : INT
+    *role_id : INT
+    --
+    model_type : VARCHAR
+}
+
+entity "tickets" as tickets {
+    *id : INT
+    uuid : VARCHAR (UNIQUE)
+    --
+    user_id : INT (FK)
+    category_id : INT (FK)
+    assigned_to : INT (FK, nullable)
+    title : VARCHAR
+    description : TEXT
+    priority : ENUM
+    status : ENUM
+    sla_deadline : TIMESTAMP
+    resolved_at : TIMESTAMP
+    resolved_confirmed_at : TIMESTAMP
+    cancelled_at : TIMESTAMP
+    rating : INT
+    rating_comment : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "comments" as comments {
+    *id : INT
+    ticket_id : INT (FK)
+    --
+    user_id : INT (FK)
+    message : TEXT
+    is_internal : BOOLEAN
+    attachments : JSON
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "categories" as categories {
+    *id : INT
+    --
+    name : VARCHAR
+    slug : VARCHAR (UNIQUE)
+    description : TEXT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "knowledge_bases" as knowledge_bases {
+    *id : INT
+    --
+    title : VARCHAR
+    slug : VARCHAR (UNIQUE)
+    content : LONGTEXT
+    category_id : INT (FK, nullable)
+    author_id : INT (FK)
+    is_published : BOOLEAN
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "activity_logs" as activity_logs {
+    *id : INT
+    --
+    user_id : INT (FK, nullable)
+    ticket_id : INT (FK, nullable)
+    action : VARCHAR
+    description : TEXT
+    created_at : TIMESTAMP
+}
+
+entity "notifications" as notifications {
+    *id : UUID
+    --
+    type : VARCHAR
+    notifiable_type : VARCHAR
+    notifiable_id : INT
+    data : JSON
+    read_at : TIMESTAMP
+    created_at : TIMESTAMP
+}
+
+entity "saw_configurations" as saw_configurations {
+    *id : INT
+    --
+    code : VARCHAR (UNIQUE)
+    name : VARCHAR
+    type : ENUM
+    weight : DECIMAL
+    sort_order : INT
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+users ||--o{ model_has_roles : has
+roles ||--o{ model_has_roles : has
+
+users ||--o{ tickets : creates
+users ||--o{ tickets : assigned_to
+categories ||--o{ tickets : categorizes
+tickets ||--o{ comments : has
+users ||--o{ comments : writes
+
+categories ||--o{ knowledge_bases : categorizes
+users ||--o{ knowledge_bases : authors
+
+users ||--o{ activity_logs : performs
+tickets ||--o{ activity_logs : related_to
+
+users ||--o{ notifications : receives
+
+@enduml

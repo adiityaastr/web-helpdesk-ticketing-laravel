@@ -46,15 +46,9 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
         <PortalLayout>
             <FlashMessage success={flash.success} />
 
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-lg font-semibold text-slate-900">Tiket Saya</h1>
-                    <p className="text-sm text-slate-500">Kelola dan pantau status tiket Anda</p>
-                </div>
-                <Link href="/portal/tickets/create" className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700">
-                    <Icon name="add" size={18} filled />
-                    Buat Tiket Baru
-                </Link>
+            <div className="mb-6">
+                <h1 className="text-lg font-semibold text-slate-900">Tiket Saya</h1>
+                <p className="text-sm text-slate-500">Kelola dan pantau status tiket Anda</p>
             </div>
 
             <div className="mb-4 flex flex-col gap-2 sm:flex-row">
@@ -91,7 +85,6 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                     <div className="px-5 py-12 text-center">
                         <Icon name="inbox" size={48} className="text-slate-300" />
                         <p className="mt-2 text-slate-400">Belum ada tiket.</p>
-                        <Link href="/portal/tickets/create" className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Buat Tiket</Link>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100">
