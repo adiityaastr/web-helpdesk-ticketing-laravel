@@ -45,6 +45,8 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
     const [showReject, setShowReject] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showConfirmResolutionDialog, setShowConfirmResolutionDialog] = useState(false);
+    const [showRatingDialog, setShowRatingDialog] = useState(false);
 
     const commentForm = useForm({ message: '', attachments: [] as File[] });
     const ratingForm = useForm({ rating: ticket.rating ?? 5, rating_comment: ticket.rating_comment ?? '' });
