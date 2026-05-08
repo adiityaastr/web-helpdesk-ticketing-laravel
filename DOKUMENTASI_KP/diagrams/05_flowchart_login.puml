@@ -4,46 +4,46 @@ skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
 start
-:User buka halaman login;
+:Pengguna buka halaman login;
 :Input email & password;
-:Click tombol Login;
+:Klik tombol Login;
 
 :Validasi input;
 if (Email & password valid?) then (Tidak)
-    :Tampilkan error message;
-    :User input ulang;
+    :Tampilkan pesan error;
+    :Pengguna input ulang;
 else (Ya)
-    :Query user by email;
+    :Cari user by email;
     
     if (User ditemukan?) then (Tidak)
         :Tampilkan "Email tidak terdaftar";
-        :User input ulang;
+        :Pengguna input ulang;
     else (Ya)
-        :Verify password dengan bcrypt;
+        :Verifikasi password dengan bcrypt;
         
         if (Password benar?) then (Tidak)
             :Tampilkan "Password salah";
-            :User input ulang;
+            :Pengguna input ulang;
         else (Ya)
-            :Check user status;
+            :Cek status user;
             
             if (User aktif?) then (Tidak)
                 :Tampilkan "User tidak aktif";
             else (Ya)
                 :Generate session token;
-                :Store session di Redis;
+                :Simpan session di Redis;
                 :Set session lifetime = 120 menit;
                 
                 :Generate API token (Sanctum);
-                :Store token di database;
+                :Simpan token di database;
                 
-                :Create auth cookie;
+                :Buat auth cookie;
                 :Set cookie secure & httpOnly;
                 
-                :Log login activity;
+                :Catat aktivitas login;
                 
                 :Redirect ke dashboard;
-                :Tampilkan welcome message;
+                :Tampilkan pesan selamat datang;
             endif
         endif
     endif
@@ -52,11 +52,11 @@ endif
 stop
 
 note right
-  Security:
+  Keamanan:
   - Password hashing (bcrypt)
   - Session storage (Redis)
-  - Secure cookie (httpOnly)
-  - Activity logging
+  - Cookie aman (httpOnly)
+  - Pencatatan aktivitas
 end note
 
 @enduml

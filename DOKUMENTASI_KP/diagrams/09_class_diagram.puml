@@ -109,14 +109,14 @@ class NotificationService {
     +markAsRead(notification): void
 }
 
-User "1" -- "*" Ticket : creates
-User "1" -- "*" Comment : writes
-Ticket "1" -- "*" Comment : has
-Category "1" -- "*" Ticket : categorizes
-User "1" -- "*" Notification : receives
+User "1" -- "*" Ticket : "membuat"
+User "1" -- "*" Comment : "menulis"
+Ticket "1" -- "*" Comment : "memiliki"
+Category "1" -- "*" Ticket : "mengkategorikan"
+User "1" -- "*" Notification : "menerima"
 
-TicketController --> SawService : uses
-TicketController --> TicketPolicy : checks
-TicketController --> NotificationService : uses
+TicketController --> SawService : "menggunakan"
+TicketController --> TicketPolicy : "memeriksa"
+TicketController --> NotificationService : "menggunakan"
 
 @enduml

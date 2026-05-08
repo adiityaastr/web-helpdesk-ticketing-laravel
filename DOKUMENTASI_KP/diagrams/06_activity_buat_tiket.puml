@@ -1,0 +1,67 @@
+@startuml 06_activity_buat_tiket
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+|Pelanggan|
+start
+:Buka form buat tiket;
+:Input judul, deskripsi, dan kategori;
+:Upload lampiran (opsional);
+:Klik tombol "Kirim";
+
+|Sistem|
+partition "Validasi Input" {
+
+    if (Judul atau Deskripsi Kosong?) then (Ya)
+        :Tampilkan pesan error;
+        |Pelanggan|
+        :Input ulang data;
+        |Sistem|
+    else (Tidak)
+    endif
+
+    if (Kategori Valid?) then (Tidak)
+        :Tampilkan error kategori;
+        |Pelanggan|
+        :Pilih ulang kategori;
+        |Sistem|
+    else (Ya)
+    endif
+
+    if (Ada lampiran?) then (Ya)
+        :Validasi Ukuran (< 20MB) dan Tipe File;
+        if (File Valid?) then (Tidak)
+            :Tampilkan error lampiran;
+            |Pelanggan|
+            :Upload ulang file;
+            |Sistem|
+        else (Ya)
+        endif
+    else (Tidak)
+        :Lanjut tanpa lampiran;
+    endif
+}
+
+partition "Proses Data" {
+
+    |Database|
+    :Buat record tiket (Status: Open);
+    :Set user_id dan metadata (UUID);
+
+    |Sistem|
+    :Hitung skor SAW;
+    :Cache skor ke Redis;
+
+    fork
+        :Kirim notifikasi ke admin;
+    fork again
+        :Catat aktivitas (Audit Log);
+    end fork
+}
+
+|Pelanggan|
+:Tampilkan pesan sukses;
+:Redirect ke detail tiket;
+stop
+
+@enduml

@@ -7,7 +7,7 @@ skinparam entity {
     BorderColor #1976D2
 }
 
-entity "users" as users {
+entity "users\n(Pengguna)" as users {
     *id : INT
     --
     name : VARCHAR
@@ -19,7 +19,7 @@ entity "users" as users {
     updated_at : TIMESTAMP
 }
 
-entity "roles" as roles {
+entity "roles\n(Peran)" as roles {
     *id : INT
     --
     name : VARCHAR (UNIQUE)
@@ -28,14 +28,14 @@ entity "roles" as roles {
     updated_at : TIMESTAMP
 }
 
-entity "model_has_roles" as model_has_roles {
+entity "model_has_roles\n(User ke Peran)" as model_has_roles {
     *model_id : INT
     *role_id : INT
     --
     model_type : VARCHAR
 }
 
-entity "tickets" as tickets {
+entity "tickets\n(Tiket)" as tickets {
     *id : INT
     uuid : VARCHAR (UNIQUE)
     --
@@ -56,7 +56,7 @@ entity "tickets" as tickets {
     updated_at : TIMESTAMP
 }
 
-entity "comments" as comments {
+entity "comments\n(Komentar)" as comments {
     *id : INT
     ticket_id : INT (FK)
     --
@@ -68,7 +68,7 @@ entity "comments" as comments {
     updated_at : TIMESTAMP
 }
 
-entity "categories" as categories {
+entity "categories\n(Kategori)" as categories {
     *id : INT
     --
     name : VARCHAR
@@ -78,7 +78,7 @@ entity "categories" as categories {
     updated_at : TIMESTAMP
 }
 
-entity "knowledge_bases" as knowledge_bases {
+entity "knowledge_bases\n(Basis Pengetahuan)" as knowledge_bases {
     *id : INT
     --
     title : VARCHAR
@@ -91,7 +91,7 @@ entity "knowledge_bases" as knowledge_bases {
     updated_at : TIMESTAMP
 }
 
-entity "activity_logs" as activity_logs {
+entity "activity_logs\n(Log Aktivitas)" as activity_logs {
     *id : INT
     --
     user_id : INT (FK, nullable)
@@ -101,7 +101,7 @@ entity "activity_logs" as activity_logs {
     created_at : TIMESTAMP
 }
 
-entity "notifications" as notifications {
+entity "notifications\n(Notifikasi)" as notifications {
     *id : UUID
     --
     type : VARCHAR
@@ -112,7 +112,7 @@ entity "notifications" as notifications {
     created_at : TIMESTAMP
 }
 
-entity "saw_configurations" as saw_configurations {
+entity "saw_configurations\n(Konfigurasi SAW)" as saw_configurations {
     *id : INT
     --
     code : VARCHAR (UNIQUE)
@@ -124,21 +124,21 @@ entity "saw_configurations" as saw_configurations {
     updated_at : TIMESTAMP
 }
 
-users ||--o{ model_has_roles : has
-roles ||--o{ model_has_roles : has
+users ||--o{ model_has_roles : "memiliki"
+roles ||--o{ model_has_roles : "memiliki"
 
-users ||--o{ tickets : creates
-users ||--o{ tickets : assigned_to
-categories ||--o{ tickets : categorizes
-tickets ||--o{ comments : has
-users ||--o{ comments : writes
+users ||--o{ tickets : "membuat"
+users ||--o{ tickets : "ditugaskan_ke"
+categories ||--o{ tickets : "mengkategorikan"
+tickets ||--o{ comments : "memiliki"
+users ||--o{ comments : "menulis"
 
-categories ||--o{ knowledge_bases : categorizes
-users ||--o{ knowledge_bases : authors
+categories ||--o{ knowledge_bases : "mengkategorikan"
+users ||--o{ knowledge_bases : "menulis"
 
-users ||--o{ activity_logs : performs
-tickets ||--o{ activity_logs : related_to
+users ||--o{ activity_logs : "melakukan"
+tickets ||--o{ activity_logs : "terkait"
 
-users ||--o{ notifications : receives
+users ||--o{ notifications : "menerima"
 
 @enduml

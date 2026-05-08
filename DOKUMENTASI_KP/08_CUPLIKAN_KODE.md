@@ -577,6 +577,108 @@ class TicketApiController
 
 ---
 
+## 🧪 PHPUnit Test: Status Transition Validation
+
+**File**: `tests/Unit/TicketStatusTest.php`
+
+```php
+<?php
+
+namespace Tests\Unit;
+
+use App\Models\Ticket;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class TicketStatusTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_valid_transitions()
+    {
+        $ticket = Ticket::factory()->create(['status' => 'open']);
+        
+        $this->assertTrue($ticket->canTransitionTo('in_progress'));
+        $this->assertTrue($ticket->canTransitionTo('cancelled'));
+        $this->assertFalse($ticket->canTransitionTo('closed'));
+        $this->assertFalse($ticket->canTransitionTo('resolved'));
+    }
+
+    public function test_invalid_transitions()
+    {
+        $ticket = Ticket::factory()->create(['status' => 'closed']);
+        
+        $this->assertFalse($ticket->canTransitionTo('open'));
+        $this->assertFalse($ticket->canTransitionTo('in_progress'));
+        $this->assertFalse($ticket->canTransitionTo('resolved'));
+        $this->assertFalse($ticket->canTransitionTo('cancelled'));
+    }
+
+    public function test_resolved_status_transitions()
+    {
+        $ticket = Ticket::factory()->create(['status' => 'resolved']);
+        
+        $this->assertTrue($ticket->canTransitionTo('closed'));
+        $this->assertTrue($ticket->canTransitionTo('in_progress'));
+    }
+}
+```
+
+## ⚡ Performance Optimization: Eager Loading
+
+**File**: `app/Repositories/TicketRepository.php`
+
+```php
+<?php
+
+namespace App\Repositories;
+
+use App\Models\Ticket;
+use Illuminate\Pagination\LengthAwarePaginator;
+
+class TicketRepository
+{
+    public function getFilteredTickets(array $filters): LengthAwarePaginator
+    {
+        $query = Ticket::query()
+            ->with(['category', 'assignedTo', 'comments' => function ($q) {
+                $q->latest()->limit(3);
+            }])
+            ->withCount('comments');
+
+        if (!empty($filters['status'])) {
+            $query->whereIn('status', $filters['status']);
+        }
+
+        if (!empty($filters['priority'])) {
+            $query->whereIn('priority', $filters['priority']);
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        if (!empty($filters['assigned_to'])) {
+            $query->where('assigned_to', $filters['assigned_to']);
+        }
+
+        if (!empty($filters['search'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('title', 'like', "%{$filters['search']}%")
+                  ->orWhere('description', 'like', "%{$filters['search']}%");
+            });
+        }
+
+        $sortField = $filters['sort'] ?? 'created_at';
+        $sortDir = $filters['dir'] ?? 'desc';
+
+        return $query->orderBy($sortField, $sortDir)->paginate($filters['per_page'] ?? 15);
+    }
+}
+```
+
+---
+
 ## 📊 Kesimpulan
 
 Cuplikan kode menunjukkan implementasi production-ready dari:

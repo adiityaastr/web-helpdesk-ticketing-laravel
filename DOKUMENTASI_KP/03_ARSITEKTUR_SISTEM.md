@@ -344,10 +344,48 @@ Server
 - **Nginx Worker**: Auto-tuned
 
 ### Performance Optimization
-- **Database Indexing**: Composite indexes
-- **Query Optimization**: Eager loading, select specific columns
-- **Caching**: Redis cache, OPcache
+- **Database Indexing**: Composite indexes (status+priority, user_id+status)
+- **Query Optimization**: Eager loading, select specific columns, pagination
+- **Caching**: Redis cache (SAW scores 60s, dashboard 300s), OPcache (256MB)
 - **CDN**: Static assets (optional)
+
+### Monitoring & Observability
+- **Application Monitoring**: Laravel Telescope (development)
+- **Container Monitoring**: docker stats, docker logs
+- **Health Checks**: Nginx /health endpoint, PHP-FPM /status
+- **Logging**: Log channel stack (single + daily)
+
+---
+
+## 🔐 Security Architecture
+
+### Authentication
+- **Method**: Session-based (web) + Token-based (Sanctum - API)
+- **Password**: Bcrypt hashing (12 rounds)
+- **Session**: Redis storage, 120 menit lifetime
+- **Cookie**: Secure, httpOnly, SameSite
+
+### Authorization
+- **Method**: Role-Based Access Control (RBAC) via Spatie
+- **Roles**: admin (full access), staff (ticket management), customer (own tickets)
+- **Policies**: TicketPolicy untuk fine-grained control per model
+
+### Data Protection
+- **HTTPS**: SSL/TLS termination di Nginx
+- **CSRF**: Token validation (Laravel built-in)
+- **SQL Injection**: Prepared statements (Eloquent ORM)
+- **XSS**: HTML escaping (Blade + React sanitization)
+- **Rate Limiting**: Nginx limit_req + Laravel throttle middleware
+- **File Upload**: Size limit 20MB, MIME type whitelist
+
+### Security Headers
+| Header | Value |
+|--------|-------|
+| X-Frame-Options | SAMEORIGIN |
+| X-Content-Type-Options | nosniff |
+| X-XSS-Protection | 1; mode=block |
+| Referrer-Policy | strict-origin-when-cross-origin |
+| Permissions-Policy | camera=(), microphone=(), geolocation=() |
 
 ---
 

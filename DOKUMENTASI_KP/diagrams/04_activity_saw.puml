@@ -4,22 +4,22 @@ skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
 start
-:Request list tiket;
-:Check Redis cache;
+:Minta daftar tiket;
+:Cek cache Redis;
 
-if (Cache hit?) then (Ya)
-    :Return cached SAW scores;
-    :Sort tiket by score DESC;
+if (Cache ada?) then (Ya)
+    :Kembalikan skor SAW dari cache;
+    :Urutkan tiket by skor DESC;
 else (Tidak)
     :Ambil semua tiket dari DB;
-    :Ambil SAW config dari DB;
+    :Ambil konfigurasi SAW dari DB;
     
     partition "Normalisasi Data" {
-        :Extract nilai C1 (Priority);
-        :Extract nilai C2 (SLA Urgency);
-        :Extract nilai C3 (Wait Time);
-        :Extract nilai C4 (Customer Activity);
-        :Extract nilai C5 (Complexity);
+        :Ekstrak nilai C1 (Prioritas);
+        :Ekstrak nilai C2 (Urgensi SLA);
+        :Ekstrak nilai C3 (Waktu Tunggu);
+        :Ekstrak nilai C4 (Aktivitas Pelanggan);
+        :Ekstrak nilai C5 (Kompleksitas);
         
         :Normalisasi C1 (benefit);
         :r1 = C1 / max(C1);
@@ -43,24 +43,24 @@ else (Tidak)
         :Simpan V(i) untuk setiap tiket;
     }
     
-    partition "Ranking" {
-        :Sort tiket by V(i) DESC;
-        :Assign rank 1, 2, 3, ...;
+    partition "Peringkat" {
+        :Urutkan tiket by V(i) DESC;
+        :Assign peringkat 1, 2, 3, ...;
     }
     
-    :Cache SAW scores ke Redis;
+    :Cache skor SAW ke Redis;
     :Set TTL = 60 detik;
 endif
 
-:Return sorted tiket dengan score;
+:Kembalikan tiket terurut dengan skor;
 :Render di frontend;
-:Tampilkan ranking & score;
+:Tampilkan peringkat & skor;
 
 stop
 
 note right
-  SAW Formula:
-  V(i) = Σ(w_j × r_ij)
+  Rumus SAW:
+  V(i) = Sum(w_j * r_ij)
   
   Dimana:
   - w_j = bobot kriteria j

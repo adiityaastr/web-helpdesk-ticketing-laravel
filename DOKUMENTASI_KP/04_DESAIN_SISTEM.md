@@ -302,6 +302,32 @@ Ticket dibuat
      └─ Set
 ```
 
+## 🏛️ Interaction Overview
+
+### Component Interaction Matrix
+
+| Komponen A | Komponen B | Protokol | Tujuan |
+|-----------|-----------|----------|--------|
+| Browser | Nginx | HTTP/HTTPS | Request web assets |
+| Nginx | PHP-FPM | FastCGI | Forward request ke Laravel |
+| Laravel | MySQL | TCP 3306 | Query database |
+| Laravel | Redis | TCP 6379 | Cache & session |
+| Laravel | Queue | Redis | Dispatch job |
+| Queue | MySQL | TCP 3306 | Store notification |
+| Laravel | MailHog | SMTP 1025 | Kirim email |
+
+### Data Flow Diagram
+
+```
+[Input] User Action → [Process] Controller → [Storage] Database → [Output] Response
+                              ↓
+                         [Event] Event Dispatcher
+                              ↓
+                         [Queue] Queue Worker
+                              ↓
+                         [Async] Notification/Email
+```
+
 ---
 
 ## 📈 Kesimpulan

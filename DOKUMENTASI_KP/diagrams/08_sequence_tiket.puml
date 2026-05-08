@@ -3,53 +3,53 @@
 skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
-actor Customer
+actor Pelanggan
 participant "Browser\n(React)" as browser
 participant "Nginx" as nginx
-participant "Laravel\nController" as controller
+participant "Controller\nLaravel" as controller
 participant "TicketService" as service
 participant "Database\n(MySQL)" as db
 participant "Redis\nCache" as cache
-participant "Queue\nWorker" as queue
-participant "Notification" as notif
+participant "Antrian\nWorker" as queue
+participant "Notifikasi" as notif
 
-Customer -> browser: Buka form buat tiket
+Pelanggan -> browser: Buka form buat tiket
 browser -> browser: Render form
-Customer -> browser: Isi data & submit
+Pelanggan -> browser: Isi data & submit
 browser -> nginx: POST /tickets
 nginx -> controller: Route ke TicketController@store
 controller -> controller: Validasi input
 controller -> service: createTicket(data)
-service -> db: INSERT ticket
+service -> db: INSERT tiket
 db -> service: ticket_id
-service -> cache: calculateSAW(ticket)
-cache -> service: saw_score
-service -> db: UPDATE ticket SAW score
-service -> queue: Dispatch TicketCreatedJob
-queue -> queue: Queue job
-service -> controller: return ticket
-controller -> browser: Inertia response
-browser -> browser: Render success
-browser -> Customer: Tampilkan detail tiket
+service -> cache: calculateSAW(tiket)
+cache -> service: skor_saw
+service -> db: UPDATE tiket skor SAW
+service -> queue: Kirim TicketCreatedJob
+queue -> queue: Antri job
+service -> controller: return tiket
+controller -> browser: Response Inertia
+browser -> browser: Render sukses
+browser -> Pelanggan: Tampilkan detail tiket
 
-queue -> notif: Execute SendNotificationJob
-notif -> db: INSERT notification
-notif -> db: UPDATE notification read_at
-notif -> browser: Broadcast notification (optional)
-browser -> Customer: Tampilkan notifikasi
+queue -> notif: Eksekusi SendNotificationJob
+notif -> db: INSERT notifikasi
+notif -> db: UPDATE read_at notifikasi
+notif -> browser: Broadcast notifikasi (opsional)
+browser -> Pelanggan: Tampilkan notifikasi
 
 note over service
-  SAW Calculation:
+  Perhitungan SAW:
   - Normalisasi 5 kriteria
   - Weighted sum
   - Cache 60 detik
 end note
 
 note over queue
-  Async Processing:
-  - Send notification
-  - Send email
-  - Log activity
+  Pemrosesan Async:
+  - Kirim notifikasi
+  - Kirim email
+  - Catat aktivitas
 end note
 
 @enduml

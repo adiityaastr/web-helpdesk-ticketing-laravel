@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Detail Tiket Admin — Helpdesk</title><script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={theme:{extend:{colors:{teal:{50:'#f0fdfa',100:'#ccfbf1',200:'#99f6e4',300:'#5eead4',600:'#0d9488',700:'#0f766e',900:'#134e4a'},slate:{50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',900:'#0f172a'},rose:{50:'#fff1f2',200:'#fecdd3',600:'#e11d48',700:'#be123c'},emerald:{600:'#059669'}}}}}</script><link rel="stylesheet" href="../fonts/material-symbols-subset.css"><style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}body{font-family:'Inter',ui-sans-serif,system-ui,sans-serif;margin:0}</style></head>
+<body class="antialiased bg-slate-50">
+<div class="flex min-h-screen bg-slate-50">
+<aside class="fixed inset-y-0 left-0 z-50 w-72 flex-shrink-0 border-r border-slate-200 bg-white">
+<div class="flex h-16 items-center gap-3 border-b border-slate-100 px-6"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600"><span class="material-symbols-outlined text-white" style="font-size:22px">support_agent</span></div><div><span class="text-lg font-semibold text-slate-900">Helpdesk</span><span class="ml-1.5 rounded bg-teal-600 px-1.5 py-0.5 text-[10px] font-medium text-white">ADMIN</span></div></div>
+<nav class="flex-1 space-y-1 px-4 py-4">
+<a href="admin-dashboard.html" class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"><span class="material-symbols-outlined text-slate-400" style="font-size:20px">dashboard</span>Dashboard</a>
+<a href="admin-tickets.html" class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium bg-teal-600 text-white"><span class="material-symbols-outlined text-white" style="font-size:20px;font-variation-settings:'FILL' 1">mail</span>Kelola Tiket</a>
+</nav>
+</aside>
+<div class="flex flex-1 flex-col lg:ml-72">
+<header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6"><div class="hidden h-9 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 lg:flex lg:max-w-sm"><span class="material-symbols-outlined text-slate-400" style="font-size:18px">search</span><input type="text" placeholder="Cari..." class="flex-1 border-none bg-transparent text-sm text-slate-600 outline-none"></div></header>
+<main class="flex-1 p-6">
+<div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div class="flex flex-wrap items-center gap-2"><h1 class="text-lg font-semibold text-slate-900">Laptop tidak bisa menyala</h1><span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700">Terbuka</span><span class="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700">Kritis</span></div><p class="mt-1 text-sm text-slate-500">#ad0d39f1 -- Dibuat 2026-05-08 18:00</p></div><div class="flex gap-2"><a href="admin-tickets.html" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Kembali</a><button type="button" class="rounded-md border border-rose-200 px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50">Hapus</button></div></div>
+<div class="grid gap-4 lg:grid-cols-3">
+<div class="space-y-4 lg:col-span-2">
+<div class="rounded-lg border border-slate-200 bg-white p-5"><h2 class="mb-3 text-sm font-semibold text-slate-900">Deskripsi</h2><p class="whitespace-pre-wrap text-sm text-slate-600">Laptop saya tiba-tiba mati dan tidak bisa dinyalakan kembali. Sudah dicoba charge tapi tidak ada respon sama sekali.</p></div>
+<form class="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+<h2 class="text-sm font-semibold text-slate-900">Kelola Tiket</h2>
+<div class="grid gap-3 sm:grid-cols-3">
+<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Status</label><select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"><option value="" disabled>Pilih status...</option><option>Sedang Diproses</option><option selected>Selesai</option><option>Ditutup</option></select></div>
+<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Prioritas</label><select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"><option>Kritis</option><option selected>Tinggi</option><option>Sedang</option><option>Rendah</option></select></div>
+<div><label class="mb-1.5 block text-sm font-medium text-slate-700">Tugaskan ke</label><select class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"><option value="">Belum ditugaskan</option><option>Administrator</option><option selected>Staff IT</option></select></div>
+</div>
+<button type="submit" class="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">Simpan Perubahan</button>
+</form>
+<div class="rounded-lg border border-slate-200 bg-white p-5">
+<div class="mb-4 flex items-center justify-between"><h2 class="text-sm font-semibold text-slate-900">Komentar &amp; Catatan (2)</h2></div>
+<div class="space-y-3">
+<div class="rounded-md border border-slate-200 bg-slate-50 p-4"><div class="mb-1 flex items-center justify-between"><span class="text-sm font-medium text-slate-900">Staff IT</span><span class="text-xs text-slate-400">2026-05-08 18:30</span></div><p class="text-sm text-slate-600">Baik, kami akan segera mengecek unit laptop tersebut.</p></div>
+<div class="rounded-md border border-amber-200 bg-amber-50 p-4"><div class="mb-1 flex items-center justify-between"><div class="flex items-center gap-2"><span class="text-sm font-medium text-slate-900">Staff IT</span><span class="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">Internal</span></div><span class="text-xs text-slate-400">2026-05-08 18:15</span></div><p class="text-sm text-slate-600">Perlu di-cek dulu apakah ini masalah hardware atau baterai. Kemungkinan perlu ganti.</p></div>
+</div>
+<form class="mt-6 space-y-3"><textarea class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500" rows="3" placeholder="Tulis komentar..."></textarea><div class="flex items-center gap-3"><input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" class="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-700"><button type="submit" class="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">Kirim</button></div></form>
+</div>
+</div>
+<div class="space-y-4">
+<div class="rounded-lg border border-slate-200 bg-white p-5"><h3 class="mb-3 text-sm font-semibold text-slate-900">Detail Tiket</h3><dl class="space-y-3 text-sm">
+<div><dt class="text-slate-400">ID</dt><dd class="font-mono text-slate-900">ad0d39f1</dd></div>
+<div><dt class="text-slate-400">Pelapor</dt><dd class="font-medium text-slate-900">Pengguna</dd></div>
+<div><dt class="text-slate-400">Kategori</dt><dd class="font-medium text-slate-900">Hardware</dd></div>
+<div><dt class="text-slate-400">Ditugaskan</dt><dd class="font-medium text-slate-900">Staff IT</dd></div>
+</dl></div>
+<div class="rounded-lg border border-teal-200 bg-teal-50 p-5"><h3 class="mb-2 text-sm font-semibold text-teal-900">Rating Pengguna</h3><div class="flex items-center gap-1"><span style="font-size:24px;color:#f59e0b">★★★★★</span><span class="ml-2 text-sm font-semibold text-teal-700">(5/5)</span></div><p class="mt-2 text-sm text-teal-700">Pelayanan sangat cepat dan responsif!</p></div>
+<div class="rounded-lg border border-slate-200 bg-white p-5"><h3 class="mb-3 text-sm font-semibold text-slate-900">Log Aktivitas</h3><div class="space-y-3">
+<div class="border-l-2 border-teal-300 pl-3"><p class="text-xs text-slate-400">2026-05-08 18:40</p><p class="text-sm text-slate-600">Staff IT -- Status berubah menjadi Sedang Diproses</p></div>
+<div class="border-l-2 border-teal-300 pl-3"><p class="text-xs text-slate-400">2026-05-08 18:30</p><p class="text-sm text-slate-600">Staff IT -- Ditugaskan ke Staff IT</p></div>
+<div class="border-l-2 border-teal-300 pl-3"><p class="text-xs text-slate-400">2026-05-08 18:00</p><p class="text-sm text-slate-600">Pengguna -- Tiket dibuat oleh pelapor.</p></div>
+</div></div>
+</div></div>
+</main></div></div></body></html>

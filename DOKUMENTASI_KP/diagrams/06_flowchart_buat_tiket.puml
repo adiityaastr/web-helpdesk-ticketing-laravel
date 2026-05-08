@@ -4,61 +4,61 @@ skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
 start
-:Customer buka form buat tiket;
+:Pelanggan buka form buat tiket;
 :Input judul tiket;
 :Input deskripsi;
 :Pilih kategori;
-:Upload lampiran (optional);
+:Upload lampiran (opsional);
 
 :Validasi input;
 if (Judul kosong?) then (Ya)
     :Error: Judul harus diisi;
-    :Customer perbaiki;
+    :Pelanggan perbaiki;
 else (Tidak)
     if (Deskripsi kosong?) then (Ya)
         :Error: Deskripsi harus diisi;
-        :Customer perbaiki;
+        :Pelanggan perbaiki;
     else (Tidak)
         if (Kategori valid?) then (Tidak)
             :Error: Kategori tidak valid;
-            :Customer pilih ulang;
+            :Pelanggan pilih ulang;
         else (Ya)
             if (Ada lampiran?) then (Ya)
                 :Validasi file;
-                if (File size > 20MB?) then (Ya)
+                if (Ukuran file > 20MB?) then (Ya)
                     :Error: File terlalu besar;
-                    :Customer upload ulang;
+                    :Pelanggan upload ulang;
                 else (Tidak)
-                    if (File type aman?) then (Tidak)
+                    if (Tipe file aman?) then (Tidak)
                         :Error: Tipe file tidak diizinkan;
-                        :Customer upload ulang;
+                        :Pelanggan upload ulang;
                     else (Ya)
                         :Simpan file ke storage;
-                        :Generate file path;
+                        :Generate path file;
                     endif
                 endif
             else (Tidak)
                 :Lanjut tanpa lampiran;
             endif
             
-            :Create Ticket record;
+            :Buat record tiket baru;
             :Set user_id = current user;
-            :Set category_id = selected category;
+            :Set category_id = kategori terpilih;
             :Set status = "open";
-            :Set priority = "medium" (default);
+            :Set prioritas = "medium" (default);
             :Set created_at = now;
             
             :Generate UUID tiket;
-            :Hitung SAW score;
-            :Cache score ke Redis;
+            :Hitung skor SAW;
+            :Cache skor ke Redis;
             
-            :Dispatch TicketCreated event;
-            :Send notification ke admin;
-            :Log activity;
+            :Kirim event TiketDibuat;
+            :Kirim notifikasi ke admin;
+            :Catat aktivitas;
             
-            :Return success response;
+            :Kembalikan response sukses;
             :Redirect ke detail tiket;
-            :Tampilkan success message;
+            :Tampilkan pesan sukses;
         endif
     endif
 endif
@@ -69,14 +69,14 @@ note right
   Validasi:
   - Judul & deskripsi tidak kosong
   - Kategori valid
-  - File size < 20MB
-  - File type aman
+  - Ukuran file < 20MB
+  - Tipe file aman
   
   Proses:
-  - Create ticket record
-  - Calculate SAW score
-  - Send notification
-  - Log activity
+  - Buat record tiket
+  - Hitung skor SAW
+  - Kirim notifikasi
+  - Catat aktivitas
 end note
 
 @enduml

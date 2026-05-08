@@ -7,47 +7,47 @@ skinparam node {
     BorderColor #388E3C
 }
 
-node "Docker Host" as host {
-    node "Nginx Container" as nginx {
+node "Host Docker" as host {
+    node "Container Nginx" as nginx {
         artifact "nginx:1.26-alpine" as nginx_img
         artifact "default.conf" as nginx_conf
     }
     
-    node "PHP-FPM Container" as phpfpm {
+    node "Container PHP-FPM" as phpfpm {
         artifact "php:8.3-fpm-alpine" as php_img
         artifact "Laravel 13" as laravel
         artifact "Inertia.js" as inertia
     }
     
-    node "MySQL Container" as mysql {
+    node "Container MySQL" as mysql {
         artifact "mysql:8.0" as mysql_img
         artifact "Database" as db_data
     }
     
-    node "Redis Container" as redis {
+    node "Container Redis" as redis {
         artifact "redis:7-alpine" as redis_img
         artifact "Cache & Session" as redis_data
     }
     
-    node "Queue Worker Container" as queue {
+    node "Container Queue Worker" as queue {
         artifact "php:8.3-fpm-alpine" as queue_img
-        artifact "Queue Worker" as queue_worker
+        artifact "Worker Antrian" as queue_worker
     }
     
-    node "MailHog Container" as mailhog {
+    node "Container MailHog" as mailhog {
         artifact "mailhog/mailhog" as mailhog_img
     }
     
-    node "Adminer Container" as adminer {
+    node "Container Adminer" as adminer {
         artifact "adminer:4.8.1" as adminer_img
     }
 }
 
-node "Client Machine" as client {
+node "Mesin Klien" as client {
     artifact "Browser" as browser
 }
 
-node "External Services" as external {
+node "Layanan Eksternal" as external {
     artifact "GitHub" as github
     artifact "Docker Hub" as dockerhub
 }
@@ -56,46 +56,46 @@ browser --> nginx : HTTP:8000
 nginx --> phpfpm : FastCGI:9000
 phpfpm --> mysql : TCP:3306
 phpfpm --> redis : TCP:6379
-phpfpm --> queue : Dispatch Job
-queue --> redis : Get Job
-queue --> mysql : Store Result
+phpfpm --> queue : Kirim Job
+queue --> redis : Ambil Job
+queue --> mysql : Simpan Hasil
 phpfpm --> mailhog : SMTP:1025
 adminer --> mysql : TCP:3306
 
-nginx_img -.-> dockerhub : pull
-php_img -.-> dockerhub : pull
-mysql_img -.-> dockerhub : pull
-redis_img -.-> dockerhub : pull
+nginx_img -.-> dockerhub : tarik
+php_img -.-> dockerhub : tarik
+mysql_img -.-> dockerhub : tarik
+redis_img -.-> dockerhub : tarik
 laravel -.-> github : clone
 
 note right of nginx
-  Port Mapping:
+  Pemetaan Port:
   8000 -> 80
 end note
 
 note right of phpfpm
-  Port Mapping:
+  Pemetaan Port:
   internal -> 9000
 end note
 
 note right of mysql
-  Port Mapping:
+  Pemetaan Port:
   3306 -> 3306
 end note
 
 note right of redis
-  Port Mapping:
+  Pemetaan Port:
   6379 -> 6379
 end note
 
 note right of mailhog
-  Port Mapping:
+  Pemetaan Port:
   8025 -> 8025
   1025 -> 1025
 end note
 
 note right of adminer
-  Port Mapping:
+  Pemetaan Port:
   8080 -> 8080
 end note
 
