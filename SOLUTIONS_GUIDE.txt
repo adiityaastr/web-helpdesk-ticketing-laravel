@@ -1,0 +1,834 @@
+﻿# DETAILED SOLUTIONS & CODE EXAMPLES
+# Laravel Helpdesk Ticketing System Analysis
+
+---
+
+## ISSUE #1: Missing Authorization di KnowledgeBaseController
+
+### Current Code (VULNERABLE):
+`php
+// app/Http/Controllers/Admin/KnowledgeBaseController.php
+public function destroy(KnowledgeBase ): RedirectResponse
+{
+    ->delete();
+    return redirect()->route('admin.knowledge-base.index')->with('success', 'Artikel berhasil dihapus.');
+}
+`
+
+### Problem:
+- Tidak ada authorization check
+- Setiap staff bisa delete artikel milik staff lain
+- Tidak ada audit trail
+
+### Solution:
+
+#### Step 1: Create KnowledgeBasePolicy
+`php
+// app/Policies/KnowledgeBasePolicy.php
+<?php
+namespace App\Policies;
+
+use App\Models\KnowledgeBase;
+use App\Models\User;
+
+class KnowledgeBasePolicy
+{
+    public function viewAny(User ): bool
+    {
+        return ->isStaff();
+    }
+
+    public function view(User , KnowledgeBase ): bool
+    {
+        return ->isStaff();
+    }
+
+    public function create(User ): bool
+    {
+        return ->isStaff();
+    }
+
+    public function update(User , KnowledgeBase ): bool
+    {
+        return ->isStaff() && (->id === ->author_id || ->hasRole('admin'));
+    }
+
+    public function delete(User , KnowledgeBase ): bool
+    {
+        return ->isStaff() && (->id === ->author_id || ->hasRole('admin'));
+    }
+}
+`
+
+#### Step 2: Register Policy
+`php
+// app/Providers/AuthServiceProvider.php
+protected \ = [
+    KnowledgeBase::class => KnowledgeBasePolicy::class,
+];
+`
+
+#### Step 3: Update Controller
+`php
+public function destroy(KnowledgeBase ): RedirectResponse
+{
+    \->authorize('delete', \);
+    \->delete();
+    return redirect()->route('admin.knowledge-base.index')
+        ->with('success', 'Artikel berhasil dihapus.');
+}
+`
+
+---
+
+## ISSUE #2: N+1 Query Problem di TicketResource
+
+### Current Code (INEFFICIENT):
+`php
+// app/Http/Resources/TicketResource.php
+public function toArray(Request \): array
+{
+    \ = app(\App\Services\SawService::class)->getScores();
+    
+    return [
+        'id' => \->id,
+        'saw_score' => \[\->id] ?? null,
+        // ... other fields
+    ];
+}
+`
+
+### Problem:
+- Setiap resource instance memanggil getScores()
+- Jika ada 100 tickets, getScores() dipanggil 100x
+- Setiap getScores() load semua tickets dari DB
+
+### Solution:
+
+#### Step 1: Pass Scores dari Controller
+`php
+// app/Http/Controllers/Admin/TicketController.php
+public function index(Request \): Response
+{
+    \ = \->ticketService->getAllTickets(
+        \->only(['status', 'priority', 'category_id', 'search']),
+        15
+    );
+
+    // Load SAW scores once
+    \ = app(\App\Services\SawService::class)->getScores();
+
+    return Inertia::render('Admin/Tickets/Index', [
+        'tickets' => TicketResource::collection(\)->additional([
+            'saw_scores' => \,
+        ]),
+        // ... other data
+    ]);
+}
+`
+
+#### Step 2: Update Resource
+`php
+// app/Http/Resources/TicketResource.php
+public function toArray(Request \): array
+{
+    // Get scores from parent collection
+    \ = \->resource->getCollection()->additional['saw_scores'] ?? [];
+    
+    return [
+        'id' => \->id,
+        'uuid' => \->uuid,
+        'saw_score' => \[\->id] ?? null,
+        // ... other fields
+    ];
+}
+`
+
+---
+
+## ISSUE #3: Inconsistent Cache Strategy
+
+### Current Code (PROBLEMATIC):
+`php
+// Multiple locations with hardcoded cache keys
+Cache::forget('admin_dashboard_stats');
+Cache::forget('admin_dashboard_charts');
+Cache::forget("portal_dashboard_stats_{->id}");
+`
+
+### Problem:
+- Cache keys hardcoded di multiple places
+- Mudah lupa invalidate cache
+- Sulit maintain dan refactor
+
+### Solution:
+
+#### Step 1: Create Cache Manager
+`php
+// app/Services/CacheManager.php
+<?php
+namespace App\Services;
+
+use Illuminate\Support\Facades\Cache;
+
+class CacheManager
+{
+    const ADMIN_DASHBOARD_STATS = 'admin_dashboard_stats';
+    const ADMIN_DASHBOARD_CHARTS = 'admin_dashboard_charts';
+    const PORTAL_DASHBOARD_STATS = 'portal_dashboard_stats';
+    const ADMIN_SAW_SCORES = 'admin_saw_scores';
+    const REFERENCE_CATEGORIES = 'reference_categories';
+    const REFERENCE_DEPARTMENTS = 'reference_departments';
+    const USER_AUTH = 'user_auth';
+    const USER_NOTIF_COUNT = 'user_notif_count';
+    
+    const TTL_SHORT = 300;      // 5 minutes
+    const TTL_MEDIUM = 3600;    // 1 hour
+    const TTL_LONG = 86400;     // 24 hours
+
+    public static function forgetAdminDashboard(): void
+    {
+        Cache::tags(['admin_dashboard'])->flush();
+    }
+
+    public static function forgetPortalDashboard(int \): void
+    {
+        Cache::tags(["portal_dashboard_{}"])->flush();
+    }
+
+    public static function forgetReferences(): void
+    {
+        Cache::tags(['references'])->flush();
+    }
+
+    public static function forgetUserAuth(int \): void
+    {
+        Cache::forget(self::USER_AUTH . "_{}");
+    }
+
+    public static function forgetUserNotifications(int \): void
+    {
+        Cache::forget(self::USER_NOTIF_COUNT . "_{}");
+    }
+}
+`
+
+#### Step 2: Update Services
+`php
+// app/Services/TicketService.php
+public function createTicket(Request \, User \): Ticket
+{
+    // ... create ticket logic
+    
+    // Use CacheManager instead of hardcoded keys
+    CacheManager::forgetAdminDashboard();
+    CacheManager::forgetPortalDashboard(\->id);
+    
+    return \;
+}
+`
+
+#### Step 3: Use Tags in Cache Calls
+`php
+// app/Services/DashboardService.php
+public function getAdminStats(): array
+{
+    return Cache::tags(['admin_dashboard'])->remember(
+        'admin_stats',
+        CacheManager::TTL_MEDIUM,
+        function () {
+            // ... stats calculation
+        }
+    );
+}
+`
+
+---
+
+## ISSUE #4: Missing Rate Limiting
+
+### Current Code (NO PROTECTION):
+`php
+// routes/api.php
+Route::prefix('v1')->group(function (): void {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    // ... no rate limiting
+});
+`
+
+### Solution:
+
+#### Step 1: Create Rate Limit Middleware
+`php
+// app/Http/Middleware/RateLimitMiddleware.php
+<?php
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+class RateLimitMiddleware
+{
+    public function handle(Request \, Closure \)
+    {
+        // Stricter limit for login attempts
+        if (\->is('*/login')) {
+            \ = RateLimiter::attempt(
+                'login:' . \->ip(),
+                \ = 5,
+                function () {
+                    return 60; // 60 seconds
+                }
+            );
+
+            if (!limit) {
+                return response()->json([
+                    'message' => 'Too many login attempts. Please try again later.'
+                ], 429);
+            }
+        }
+
+        return \(\);
+    }
+}
+`
+
+#### Step 2: Update Routes
+`php
+// routes/api.php
+Route::prefix('v1')->group(function (): void {
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/login', [AuthController::class, 'login']);
+    });
+
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::middleware('throttle:60,1')->group(function () {
+            Route::get('/tickets', [TicketController::class, 'index']);
+            Route::post('/tickets', [TicketController::class, 'store']);
+        });
+    });
+});
+`
+
+---
+
+## ISSUE #5: Generic Exception Handling
+
+### Current Code (POOR ERROR HANDLING):
+`php
+// app/Services/TicketService.php
+public function confirmResolution(Ticket \, User \): Ticket
+{
+    if (\->user_id !== \->id) {
+        throw new \Exception('Only reporter can confirm resolution');
+    }
+    // ... more generic exceptions
+}
+`
+
+### Solution:
+
+#### Step 1: Create Custom Exceptions
+`php
+// app/Exceptions/TicketException.php
+<?php
+namespace App\Exceptions;
+
+use Exception;
+
+class TicketException extends Exception
+{
+    public static function notResolved(): self
+    {
+        return new self('Ticket is not in resolved status', 422);
+    }
+
+    public static function alreadyConfirmed(): self
+    {
+        return new self('Resolution has already been confirmed', 422);
+    }
+
+    public static function unauthorized(): self
+    {
+        return new self('Only ticket reporter can perform this action', 403);
+    }
+
+    public static function cannotRate(): self
+    {
+        return new self('Ticket must be resolved to rate', 422);
+    }
+
+    public static function alreadyRated(): self
+    {
+        return new self('Rating has already been provided', 422);
+    }
+}
+`
+
+#### Step 2: Update Service
+`php
+// app/Services/TicketService.php
+public function confirmResolution(Ticket \, User \): Ticket
+{
+    if (\->user_id !== \->id) {
+        throw TicketException::unauthorized();
+    }
+
+    if (\->status !== 'resolved') {
+        throw TicketException::notResolved();
+    }
+
+    if (\->resolved_confirmed_at) {
+        throw TicketException::alreadyConfirmed();
+    }
+
+    // ... rest of logic
+}
+`
+
+#### Step 3: Handle in Controller
+`php
+// app/Http/Controllers/Portal/TicketController.php
+public function confirmResolution(Ticket \): RedirectResponse
+{
+    \->authorize('view', \);
+    
+    try {
+        \->ticketService->confirmResolution(\, auth()->user());
+    } catch (TicketException \) {
+        return redirect()->route('portal.tickets.show', \)
+            ->withErrors(['error' => \->getMessage()]);
+    }
+
+    return redirect()->route('portal.tickets.show', \)
+        ->with('success', 'Konfirmasi berhasil. Tiket telah ditutup.');
+}
+`
+
+---
+
+## ISSUE #6: Cascade Delete Risk pada Category
+
+### Current Code (RISKY):
+`php
+// database/migrations/2026_04_24_140731_create_tickets_table.php
+\->foreignId('category_id')->constrained()->restrictOnDelete();
+`
+
+### Problem:
+- restrictOnDelete akan throw error jika ada tickets
+- Tidak ada graceful handling
+- User experience buruk
+
+### Solution:
+
+#### Step 1: Add Soft Delete to Category
+`php
+// database/migrations/2026_XX_XX_XXXXXX_add_soft_delete_to_categories.php
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('categories', function (Blueprint \) {
+            \->softDeletes();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('categories', function (Blueprint \) {
+            \->dropSoftDeletes();
+        });
+    }
+};
+`
+
+#### Step 2: Update Category Model
+`php
+// app/Models/Category.php
+<?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Category extends Model
+{
+    use SoftDeletes;
+    
+    protected \ = ['name', 'slug', 'description'];
+}
+`
+
+#### Step 3: Update Controller with Validation
+`php
+// app/Http/Controllers/Admin/CategoryController.php
+public function destroy(Category \): RedirectResponse
+{
+    // Check if category has tickets
+    if (\->tickets()->exists()) {
+        return redirect()->route('admin.categories.index')
+            ->withErrors([
+                'error' => 'Kategori tidak dapat dihapus karena masih memiliki tiket. ' .
+                          'Pindahkan tiket ke kategori lain terlebih dahulu.'
+            ]);
+    }
+
+    \->delete();
+    Cache::forget('reference_categories');
+
+    return redirect()->route('admin.categories.index')
+        ->with('success', 'Kategori berhasil dihapus.');
+}
+`
+
+---
+
+## ISSUE #7: File Upload Validation Inconsistency
+
+### Current Code (INCONSISTENT):
+`php
+// app/Http/Requests/StoreTicketRequest.php
+'attachments.*' => ['file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+
+// app/Http/Controllers/Api/TicketController.php
+'attachments.*' => ['file', 'max:10240'],
+`
+
+### Solution:
+
+#### Step 1: Create Constants
+`php
+// app/Constants/FileConstants.php
+<?php
+namespace App\Constants;
+
+class FileConstants
+{
+    const MAX_FILE_SIZE_KB = 2048;  // 2MB
+    const MAX_FILE_SIZE_BYTES = self::MAX_FILE_SIZE_KB * 1024;
+    
+    const ALLOWED_MIME_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'application/pdf',
+    ];
+    
+    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
+    
+    const MAX_FILES_PER_UPLOAD = 5;
+}
+`
+
+#### Step 2: Update Requests
+`php
+// app/Http/Requests/StoreTicketRequest.php
+<?php
+namespace App\Http\Requests;
+
+use App\Constants\FileConstants;
+
+class StoreTicketRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'attachments' => [
+                'nullable',
+                'array',
+                'max:' . FileConstants::MAX_FILES_PER_UPLOAD
+            ],
+            'attachments.*' => [
+                'file',
+                'mimes:' . implode(',', FileConstants::ALLOWED_EXTENSIONS),
+                'max:' . FileConstants::MAX_FILE_SIZE_KB,
+            ],
+        ];
+    }
+}
+`
+
+#### Step 3: Update API Controller
+`php
+// app/Http/Controllers/Api/TicketController.php
+public function store(Request \): JsonResponse
+{
+    \->validate([
+        'attachments' => [
+            'nullable',
+            'array',
+            'max:' . FileConstants::MAX_FILES_PER_UPLOAD
+        ],
+        'attachments.*' => [
+            'file',
+            'mimes:' . implode(',', FileConstants::ALLOWED_EXTENSIONS),
+            'max:' . FileConstants::MAX_FILE_SIZE_KB,
+        ],
+    ]);
+    
+    // ... rest of logic
+}
+`
+
+---
+
+## ISSUE #8: Missing Ticket Status State Machine
+
+### Current Code (NO VALIDATION):
+`php
+// app/Http/Requests/UpdateTicketRequest.php
+'status' => ['required', Rule::in(['in_progress', 'resolved', 'closed', 'cancelled'])],
+`
+
+### Problem:
+- Ticket bisa jump dari 'open' ke 'closed' tanpa 'resolved'
+- Tidak ada business logic validation
+- Inconsistent state transitions
+
+### Solution:
+
+#### Step 1: Create Status Enum
+`php
+// app/Enums/TicketStatus.php
+<?php
+namespace App\Enums;
+
+enum TicketStatus: string
+{
+    case OPEN = 'open';
+    case IN_PROGRESS = 'in_progress';
+    case RESOLVED = 'resolved';
+    case CLOSED = 'closed';
+    case CANCELLED = 'cancelled';
+
+    public function canTransitionTo(self \): bool
+    {
+        return match (\) {
+            self::OPEN => in_array(\, [
+                self::IN_PROGRESS,
+                self::CANCELLED,
+            ]),
+            self::IN_PROGRESS => in_array(\, [
+                self::RESOLVED,
+                self::CANCELLED,
+            ]),
+            self::RESOLVED => in_array(\, [
+                self::CLOSED,
+                self::IN_PROGRESS,
+            ]),
+            self::CLOSED => false,
+            self::CANCELLED => false,
+        };
+    }
+}
+`
+
+#### Step 2: Update Service
+`php
+// app/Services/TicketService.php
+public function updateTicket(Ticket \, array \, User \): Ticket
+{
+    if (isset(\['status'])) {
+        \ = TicketStatus::from(\->status);
+        \ = TicketStatus::from(\['status']);
+
+        if (!\->canTransitionTo(\)) {
+            throw new \InvalidArgumentException(
+                "Cannot transition from {->value} to {->value}"
+            );
+        }
+    }
+
+    // ... rest of logic
+}
+`
+
+---
+
+## ISSUE #9: Missing Composite Database Indexes
+
+### Current Code (INCOMPLETE):
+`php
+// database/migrations/2026_05_02_111056_add_ticket_indexes.php
+\->index('status');
+\->index('priority');
+\->index('user_id');
+\->index('assigned_to');
+`
+
+### Solution:
+
+#### Step 1: Add Composite Indexes
+`php
+// database/migrations/2026_XX_XX_XXXXXX_add_composite_indexes.php
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('tickets', function (Blueprint \) {
+            // Composite indexes for common filter combinations
+            \->index(['user_id', 'status']);
+            \->index(['assigned_to', 'status']);
+            \->index(['category_id', 'status']);
+            \->index(['created_at', 'status']);
+        });
+
+        Schema::table('comments', function (Blueprint \) {
+            \->index(['ticket_id', 'created_at']);
+        });
+
+        Schema::table('activity_logs', function (Blueprint \) {
+            \->index(['ticket_id', 'created_at']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('tickets', function (Blueprint \) {
+            \->dropIndex(['user_id', 'status']);
+            \->dropIndex(['assigned_to', 'status']);
+            \->dropIndex(['category_id', 'status']);
+            \->dropIndex(['created_at', 'status']);
+        });
+
+        Schema::table('comments', function (Blueprint \) {
+            \->dropIndex(['ticket_id', 'created_at']);
+        });
+
+        Schema::table('activity_logs', function (Blueprint \) {
+            \->dropIndex(['ticket_id', 'created_at']);
+        });
+    }
+};
+`
+
+---
+
+## ISSUE #10: Insufficient Logging
+
+### Current Code (MINIMAL):
+`php
+// app/Services/SawService.php
+try {
+    return \->calculateScores();
+} catch (\Exception \) {
+    Log::error('SAW calculation failed: '.\->getMessage(), ['exception' => \]);
+    return [];
+}
+`
+
+### Solution:
+
+#### Step 1: Create Audit Logger
+`php
+// app/Services/AuditLogger.php
+<?php
+namespace App\Services;
+
+use Illuminate\Support\Facades\Log;
+
+class AuditLogger
+{
+    public static function logTicketAction(
+        int \,
+        int \,
+        string \,
+        array \ = []
+    ): void {
+        Log::channel('audit')->info('Ticket action', [
+            'ticket_id' => \,
+            'user_id' => \,
+            'action' => \,
+            'changes' => \,
+            'timestamp' => now()->toIso8601String(),
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
+    public static function logError(
+        string \,
+        \,
+        array \ = []
+    ): void {
+        Log::error(\, [
+            'exception' => \->getMessage(),
+            'file' => \->getFile(),
+            'line' => \->getLine(),
+            'user_id' => auth()->id(),
+            'data' => \,
+        ]);
+    }
+}
+`
+
+#### Step 2: Update Services
+`php
+// app/Services/TicketService.php
+public function updateTicket(Ticket \, array \, User \): Ticket
+{
+    \ = \->status;
+    
+    try {
+        \->update(\);
+        
+        AuditLogger::logTicketAction(
+            \->id,
+            \->id,
+            'update',
+            ['old_status' => \, 'new_status' => \->status]
+        );
+    } catch (\Exception \) {
+        AuditLogger::logError('Failed to update ticket', \, [
+            'ticket_id' => \->id,
+            'payload' => \,
+        ]);
+        throw \;
+    }
+
+    return \;
+}
+`
+
+---
+
+## CHECKLIST IMPLEMENTASI
+
+### Phase 1 (Critical - Week 1-2):
+- [ ] Add authorization checks ke KnowledgeBase, Category, Department controllers
+- [ ] Disable APP_DEBUG di production
+- [ ] Implement rate limiting di routes
+- [ ] Add soft delete ke Category model
+- [ ] Create custom exception classes
+
+### Phase 2 (High - Week 2-4):
+- [ ] Implement CacheManager service
+- [ ] Fix N+1 query di TicketResource
+- [ ] Add composite database indexes
+- [ ] Standardize file upload validation
+- [ ] Create TicketStatus enum
+
+### Phase 3 (Medium - Week 4-6):
+- [ ] Implement AuditLogger service
+- [ ] Extract duplicate code ke services
+- [ ] Add API documentation
+- [ ] Create unit tests
+- [ ] Implement CSP headers
+
+### Phase 4 (Low - Ongoing):
+- [ ] Performance monitoring
+- [ ] Error message standardization
+- [ ] Code refactoring
+- [ ] Documentation updates
+

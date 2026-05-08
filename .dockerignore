@@ -1,36 +1,34 @@
-*.md
-*.log
-
-.env
-.env.backup
-.env.production
-.env.local
-
 .git/
-.github/
 .gitignore
 .gitattributes
 
-.editorconfig
-.npmrc
+.env
+.env.local
+.env.*.local
 
-node_modules/
 vendor/
-storage/
+node_modules/
 
-Dockerfile
-docker-compose.yml
-docker-compose.override.yml
-.dockerignore
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/public/*
+!storage/app/public/.gitkeep
+storage/debugbar/
 
-phpunit.xml
-tests/
-
-# IDE / OS
-.idea/
-.vscode/
-.cursor/
-.codex/
 .DS_Store
 Thumbs.db
-Desktop.ini
+
+*.md
+LICENSE
+
+tests/
+phpunit.xml
+playwright.config.ts
+
+docker-compose.override.yml
+
+hot
+*.log
+.env.backup

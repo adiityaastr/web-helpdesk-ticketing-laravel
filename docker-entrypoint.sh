@@ -1,71 +1,79 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-# ------------------------------------------------------------------
-# Create .env from .env.example if missing
-# ------------------------------------------------------------------
-if [ ! -f /var/www/html/.env ]; then
-    echo "==> Creating .env from .env.example..."
-    cp /var/www/html/.env.example /var/www/html/.env
+log()  { echo "[$(date '+%H:%M:%S')] $*"; }
+warn() { echo "[$(date '+%H:%M:%S')] [WARN] $*"; }
+
+APP_DIR="/var/www/html"
+
+log "============================================"
+log " Helpdesk Ticketing — Container Init"
+log "============================================"
+
+log "Step 1/8 — Copy .env if missing"
+if [ ! -f "$APP_DIR/.env" ]; then
+    if [ -f "$APP_DIR/.env.docker" ]; then
+        cp "$APP_DIR/.env.docker" "$APP_DIR/.env"
+        log "  -> Copied .env.docker -> .env"
+    elif [ -f "$APP_DIR/.env.example" ]; then
+        cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+        log "  -> Copied .env.example -> .env"
+    fi
 fi
 
-# ------------------------------------------------------------------
-# Fix permissions (storage & bootstrap/cache must be writable)
-# ------------------------------------------------------------------
-chown -R www-data:www-data /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/bootstrap/cache
+log "Step 2/8 — Storage directories"
+mkdir -p "$APP_DIR/storage/framework/cache/data" \
+         "$APP_DIR/storage/framework/sessions" \
+         "$APP_DIR/storage/framework/views" \
+         "$APP_DIR/storage/logs" \
+         "$APP_DIR/storage/app/public"
+chmod -R 775 "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" 2>/dev/null || true
 
-if [ -d /var/www/html/storage ]; then
-    mkdir -p /var/www/html/storage/framework/cache/data
-    mkdir -p /var/www/html/storage/framework/sessions
-    mkdir -p /var/www/html/storage/framework/views
-    mkdir -p /var/www/html/storage/logs
-    mkdir -p /var/www/html/storage/app/public
-    chown -R www-data:www-data /var/www/html/storage
-    chmod -R 775 /var/www/html/storage
+log "Step 3/8 — Composer install"
+if [ ! -f "$APP_DIR/vendor/autoload.php" ]; then
+    composer install --no-interaction --no-progress --optimize-autoloader
+    log "  -> Dependencies installed"
+else
+    log "  -> vendor/ exists, skipping"
 fi
 
-# ------------------------------------------------------------------
-# Install PHP dependencies (skip if vendor already exists)
-# ------------------------------------------------------------------
-if [ ! -f /var/www/html/vendor/autoload.php ]; then
-    echo "==> Installing PHP dependencies..."
-    composer install --no-interaction --optimize-autoloader
-fi
-
-# ------------------------------------------------------------------
-# Generate APP_KEY if empty
-# ------------------------------------------------------------------
-if ! grep -q '^APP_KEY=.\+' /var/www/html/.env 2>/dev/null; then
-    echo "==> Generating application key..."
+log "Step 4/8 — Application key"
+if ! grep -q '^APP_KEY=.\+' "$APP_DIR/.env" 2>/dev/null; then
     php artisan key:generate --force
+    log "  -> Key generated"
+else
+    log "  -> Key exists"
 fi
 
-# ------------------------------------------------------------------
-# Storage symlink (so uploaded files are accessible via URL)
-# ------------------------------------------------------------------
-echo "==> Creating storage symlink..."
+log "Step 5/8 — Storage symlink"
 php artisan storage:link 2>/dev/null || true
 
-# ------------------------------------------------------------------
-# Wait for database, then run migrations + seeders
-# ------------------------------------------------------------------
-echo "==> Waiting for database..."
+log "Step 6/8 — Database migrations"
+RETRIES=30
 until php artisan migrate --force 2>/dev/null; do
-    echo "    Retrying in 2s..."
+    RETRIES=$((RETRIES-1))
+    if [ $RETRIES -le 0 ]; then
+        warn "   Database unreachable after 30 attempts"
+        break
+    fi
     sleep 2
 done
+log "  -> Migrations done"
 
-echo "==> Seeding database..."
-php artisan db:seed --force 2>/dev/null || true
+log "Step 7/8 — Database seed"
+if ! php artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | grep -q '[1-9]'; then
+    php artisan db:seed --force 2>/dev/null || true
+    log "  -> Seeded"
+else
+    log "  -> Already seeded, skipping"
+fi
 
-echo "==> Warming caches..."
-php artisan optimize
+log "Step 8/8 — Cache warmup"
+php artisan optimize 2>/dev/null || true
 php artisan event:cache 2>/dev/null || true
 
-echo "==> Setup complete, starting PHP-FPM..."
+log "============================================"
+log " Setup complete — starting PHP-FPM"
+log "============================================"
 
-# ------------------------------------------------------------------
-# Start PHP-FPM via the official Docker entrypoint
-# ------------------------------------------------------------------
 exec docker-php-entrypoint php-fpm
