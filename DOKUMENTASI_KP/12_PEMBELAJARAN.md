@@ -324,42 +324,57 @@ public function test_customer_can_create_ticket()
 
 ---
 
-## 💡 Insight Penting
+## 🎯 Career Path & Future Learning
 
-### 1. Requirement Gathering adalah Kunci
+### Skill Development Roadmap
 
-> "Jangan langsung coding. Clarify requirement dulu. Ambil waktu untuk 
-> understand problem. Ini menghemat rework di kemudian hari."
+**Phase 1 (Sekarang - Completed)**
+- ✅ Laravel 13 fundamentals
+- ✅ React 19 + Inertia.js
+- ✅ Database design & optimization
+- ✅ Docker & containerization
+- ✅ SAW algorithm implementation
+- ✅ Testing & debugging
 
-### 2. Design Sebelum Code
+**Phase 2 (Next 3-6 bulan)**
+- 📚 Advanced Laravel (Telescope, Horizon, Dusk)
+- 📚 Advanced React (Redux, Context API optimization)
+- 📚 Kubernetes & orchestration
+- 📚 CI/CD pipeline (GitHub Actions, GitLab CI)
+- 📚 Microservices architecture
+- 📚 GraphQL API development
 
-> "Buat design dulu (ER diagram, use case, flowchart). Design yang baik 
-> membuat coding lebih smooth & code quality lebih baik."
+**Phase 3 (6-12 bulan)**
+- 📚 System design & scalability
+- 📚 Cloud architecture (AWS, GCP, Azure)
+- 📚 Machine learning basics
+- 📚 DevOps & infrastructure as code
+- 📚 Security & penetration testing
+- 📚 Technical leadership & mentoring
 
-### 3. Testing Sejak Awal
+### Recommended Learning Resources
 
-> "Jangan test di akhir. Test sejak awal development. Unit test untuk 
-> function, feature test untuk workflow. Ini catch bug lebih cepat."
+| Topic | Resource | Duration |
+|-------|----------|----------|
+| Advanced Laravel | Laravel.io, Laracasts | 40 jam |
+| Advanced React | React docs, egghead.io | 30 jam |
+| Kubernetes | Linux Academy, Udemy | 50 jam |
+| System Design | System Design Interview | 60 jam |
+| Cloud Architecture | AWS/GCP certification | 80 jam |
 
-### 4. Documentation Penting
+### Career Opportunities
 
-> "Dokumentasi bukan optional. Dokumentasi yang baik membuat onboarding 
-> developer baru lebih cepat & maintenance lebih mudah."
+**Current Level**: Mid-level Full-stack Developer
+- Salary range: $50,000 - $70,000/year
+- Job market: High demand
 
-### 5. Performance Matters
+**Target Level (1 year)**: Senior Full-stack Developer
+- Salary range: $80,000 - $120,000/year
+- Requirements: Advanced system design, mentoring, architecture
 
-> "Jangan optimize premature, tapi jangan ignore performance. Database 
-> indexing & caching harus dipikirkan dari awal."
-
-### 6. Security First
-
-> "Security bukan feature, tapi requirement. Setiap input harus divalidasi. 
-> Setiap action harus di-authorize."
-
-### 7. Continuous Learning
-
-> "Technology terus berkembang. Harus terus belajar. Baca documentation, 
-> ikuti tutorial, experiment dengan code."
+**Target Level (3 years)**: Tech Lead / Architect
+- Salary range: $120,000 - $180,000/year
+- Requirements: Leadership, strategic thinking, innovation
 
 ---
 

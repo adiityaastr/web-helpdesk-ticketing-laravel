@@ -18,12 +18,12 @@ class TicketActivityNotification extends Notification
     ) {
     }
 
-    public function via(object $notifiable): array
+    public function via($notifiable): array
     {
         return ['database'];
     }
 
-    public function toArray(object $notifiable): array
+    public function toArray($notifiable): array
     {
         return [
             'ticket_id' => $this->ticket->id,

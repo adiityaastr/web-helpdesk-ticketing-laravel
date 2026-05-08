@@ -154,27 +154,68 @@ public function canTransitionTo($newStatus)
 }
 ```
 
-### Integrasi API
+### Error Handling & Edge Cases
 
-#### **Sanctum Token Authentication**
+#### Error Handling
 
 ```php
-// routes/api.php
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('tickets', TicketApiController::class);
-    Route::post('tickets/{ticket}/comments', CommentApiController::class);
-});
-
-// app/Http/Controllers/Api/TicketApiController.php
-public function index()
+// app/Http/Controllers/TicketController.php
+public function store(StoreTicketRequest $request)
 {
-    $tickets = Ticket::where('user_id', auth()->id())
-        ->with('comments', 'category')
-        ->paginate(15);
-    
-    return TicketResource::collection($tickets);
+    try {
+        DB::beginTransaction();
+        
+        // Create ticket
+        $ticket = Ticket::create([...]);
+        
+        // Handle attachments
+        if ($request->hasFile('attachments')) {
+            try {
+                foreach ($request->file('attachments') as $file) {
+                    $path = $file->store('tickets/' . $ticket->id, 'public');
+                    $ticket->attachments()->create(['path' => $path]);
+                }
+            } catch (Exception $e) {
+                Log::error('File upload failed', ['error' => $e->getMessage()]);
+                throw new FileUploadException('File upload gagal');
+            }
+        }
+        
+        // Calculate SAW score
+        try {
+            $sawScore = app(SawService::class)->calculateScore($ticket);
+            $ticket->update(['saw_score' => $sawScore]);
+        } catch (Exception $e) {
+            Log::warning('SAW calculation failed', ['ticket_id' => $ticket->id]);
+            // Continue tanpa SAW score
+        }
+        
+        // Dispatch event
+        event(new TicketCreated($ticket));
+        
+        DB::commit();
+        
+        return redirect()->route('tickets.show', $ticket)
+            ->with('success', 'Ticket created successfully');
+            
+    } catch (Exception $e) {
+        DB::rollBack();
+        Log::error('Ticket creation failed', ['error' => $e->getMessage()]);
+        
+        return back()->withInput()
+            ->with('error', 'Gagal membuat tiket. Silakan coba lagi.');
+    }
 }
 ```
+
+#### Edge Cases
+
+1. **Tiket tanpa kategori**: Validasi di request, kategori wajib
+2. **File upload gagal**: Rollback transaction, user bisa retry
+3. **SAW calculation error**: Log warning, lanjut tanpa SAW score
+4. **Notification send gagal**: Queue retry 3x, log error
+5. **Database connection error**: Automatic retry dengan exponential backoff
+6. **Concurrent ticket creation**: Database lock, FIFO processing
 
 ---
 

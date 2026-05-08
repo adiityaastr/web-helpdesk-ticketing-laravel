@@ -40,7 +40,7 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
     const ticket = ('data' in ticketProp ? ticketProp.data : ticketProp) as Ticket;
     const { flash } = usePage<{ flash: { success?: string; error?: string }; auth: { user: { roles?: string[] } | null } }>().props;
     const staffOrAdmin = (usePage().props.auth.user?.roles ?? []).includes('staff');
-    const [ratingValue, setRatingValue] = useState(ticket.rating ?? 0);
+    const [ratingValue, setRatingValue] = useState(5);
     const [showReject, setShowReject] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -49,7 +49,7 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
     const [commentProcessing, setCommentProcessing] = useState(false);
     const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
     const [ratingProcessing, setRatingProcessing] = useState(false);
-    const [ratingData, setRatingData] = useState({ rating: ticket.rating ?? 5, rating_comment: ticket.rating_comment ?? '' });
+    const [ratingData, setRatingData] = useState({ rating_comment: '' });
     const [cancelProcessing, setCancelProcessing] = useState(false);
     const [confirmProcessing, setConfirmProcessing] = useState(false);
     const [rejectProcessing, setRejectProcessing] = useState(false);
@@ -62,44 +62,56 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
         console.log('Comment data:', data);
         setCommentProcessing(true);
         setCommentErrors({});
-        
-        // Create FormData manually for proper file handling
-        const formData = new FormData();
-        formData.append('message', data.message);
-        
-        // Append files properly
-        data.attachments.forEach((file, index) => {
-            formData.append(`attachments[${index}]`, file);
-        });
-        
-        // Use router.post with FormData
-        router.post(`${ticketPath}/comments`, formData as any, {
-            onSuccess: () => {
-                setCommentProcessing(false);
-                router.reload({ only: ['ticket', 'comments'] });
-            },
-            onError: (errors) => {
-                console.log('Comment errors:', errors);
-                setCommentErrors(errors as Record<string, string>);
-                setCommentProcessing(false);
-            },
-        });
+
+        if (data.attachments && data.attachments.length > 0) {
+            const formData = new FormData();
+            formData.append('message', data.message);
+            data.attachments.forEach((file, index) => {
+                formData.append(`attachments[${index}]`, file);
+            });
+            router.post(`${ticketPath}/comments`, formData as any, {
+                onSuccess: () => {
+                    setCommentProcessing(false);
+                    router.reload({ only: ['ticket', 'comments'] });
+                },
+                onError: (errors) => {
+                    setCommentErrors(errors as Record<string, string>);
+                    setCommentProcessing(false);
+                },
+            });
+        } else {
+            router.post(`${ticketPath}/comments`, {
+                message: data.message,
+            }, {
+                onSuccess: () => {
+                    setCommentProcessing(false);
+                    router.reload({ only: ['ticket', 'comments'] });
+                },
+                onError: (errors) => {
+                    setCommentErrors(errors as Record<string, string>);
+                    setCommentProcessing(false);
+                },
+            });
+        }
     };
 
     const submitRating = () => {
+        if (ratingValue < 1) {
+            alert('Pilih rating terlebih dahulu');
+            return;
+        }
         setRatingProcessing(true);
-        const formData = new FormData();
-        formData.append('rating', String(ratingValue));
-        formData.append('rating_comment', ratingData.rating_comment);
-        
-        router.post(`${ticketPath}/rate`, formData as any, {
+        router.post(`${ticketPath}/rate`, {
+            rating: ratingValue,
+            rating_comment: ratingData.rating_comment,
+        }, {
             onSuccess: () => {
                 setShowRatingDialog(false);
                 setRatingProcessing(false);
-                router.get(ticketPath);
             },
-            onError: () => {
+            onError: (errors) => {
                 setRatingProcessing(false);
+                alert('Gagal mengirim rating: ' + (errors.rating ?? Object.values(errors).join(', ')));
             },
         });
     };
@@ -209,7 +221,7 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                         </div>
                     )}
 
-                    {ticket.status === 'resolved' && ticket.resolved_confirmed_at && !ticket.rating && (
+                    {(ticket.status === 'resolved' || ticket.status === 'closed') && ticket.resolved_confirmed_at && ticket.rating == null && (
                         <div className="rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="mb-3 text-sm font-semibold text-slate-900">Beri Rating</h2>
                             <p className="mb-4 text-sm text-slate-500">Tiket Anda sudah diselesaikan. Beri penilaian untuk layanan kami.</p>
@@ -223,14 +235,15 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                         </div>
                     )}
 
-                    {ticket.rating && (
-                        <div className="rounded-lg border border-slate-200 bg-white p-5">
-                            <h2 className="mb-2 text-sm font-semibold text-slate-900">Rating Anda</h2>
-                            <div className="flex items-center gap-1">
-                                <RatingStars rating={ticket.rating ?? 0} readOnly size={20} />
-                                <span className="ml-2 text-sm text-slate-500">({ticket.rating}/5)</span>
+                    {ticket.rating != null && (
+                        <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
+                            <h2 className="mb-3 text-sm font-semibold text-teal-900">Rating Anda</h2>
+                            <div className="flex items-center gap-2">
+                                <RatingStars rating={ticket.rating ?? 0} readOnly size={24} />
+                                <span className="text-sm font-semibold text-teal-700">({ticket.rating}/5)</span>
                             </div>
-                            {ticket.rating_comment && <p className="mt-2 text-sm text-slate-600">{ticket.rating_comment}</p>}
+                            {ticket.rating_comment && <p className="mt-3 text-sm text-teal-700">{ticket.rating_comment}</p>}
+                            <p className="mt-2 text-xs text-teal-500">Terima kasih atas penilaian Anda!</p>
                         </div>
                     )}
                 </div>

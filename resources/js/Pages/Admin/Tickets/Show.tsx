@@ -167,17 +167,6 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                         processing={commentProcessing}
                         errors={commentErrors}
                     />
-
-                    {ticket.rating != null && (
-                        <div className="rounded-lg border border-slate-200 bg-white p-5">
-                            <h2 className="mb-2 text-sm font-semibold text-slate-900">Rating Pengguna</h2>
-                            <div className="flex items-center gap-1">
-                                <RatingStars rating={ticket.rating} readOnly size={20} />
-                                <span className="ml-2 text-sm text-slate-500">({ticket.rating}/5)</span>
-                            </div>
-                            {ticket.rating_comment && <p className="mt-2 text-sm text-slate-600">{ticket.rating_comment}</p>}
-                        </div>
-                    )}
                 </div>
 
                 <div className="space-y-4">
@@ -194,6 +183,17 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                             {ticket.cancelled_at && <div><dt className="text-slate-400">Dibatalkan</dt><dd className="font-medium text-rose-600">{ticket.cancelled_at}</dd></div>}
                         </dl>
                     </div>
+
+                    {ticket.rating != null && (
+                        <div className="rounded-lg border border-teal-200 bg-teal-50 p-5">
+                            <h3 className="mb-2 text-sm font-semibold text-teal-900">Rating Pengguna</h3>
+                            <div className="flex items-center gap-1">
+                                <RatingStars rating={ticket.rating} readOnly size={24} />
+                                <span className="ml-2 text-sm font-semibold text-teal-700">({ticket.rating}/5)</span>
+                            </div>
+                            {ticket.rating_comment && <p className="mt-2 text-sm text-teal-700">{ticket.rating_comment}</p>}
+                        </div>
+                    )}
 
                     <div className="rounded-lg border border-slate-200 bg-white p-5">
                         <h3 className="mb-3 text-sm font-semibold text-slate-900">Log Aktivitas</h3>

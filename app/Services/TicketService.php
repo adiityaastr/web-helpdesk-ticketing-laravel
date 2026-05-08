@@ -234,7 +234,7 @@ class TicketService
             throw TicketException::unauthorized();
         }
 
-        if ($ticket->status !== 'resolved') {
+        if (!in_array($ticket->status, ['resolved', 'closed'])) {
             throw TicketException::cannotRate();
         }
 
