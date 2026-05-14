@@ -9,15 +9,20 @@ skinparam class {
 
 class User {
     -id: int
+    -employee_number: string
     -name: string
     -email: string
     -password: string
+    -phone: string
+    -position: string
+    -department_id: int
     --
-    +create(): void
-    +update(): void
-    +delete(): void
-    +hasRole(role): bool
-    +hasPermission(permission): bool
+    +reportedTickets(): HasMany
+    +assignedTickets(): HasMany
+    +comments(): HasMany
+    +dept(): BelongsTo
+    +isStaff(): bool
+    +isCustomer(): bool
 }
 
 class Ticket {
@@ -25,17 +30,20 @@ class Ticket {
     -uuid: string
     -user_id: int
     -category_id: int
+    -assigned_to: int
     -title: string
     -description: string
     -priority: enum
     -status: enum
-    -saw_score: float
+    -sla_deadline: datetime
+    -rating: int
     --
-    +create(): void
-    +update(): void
-    +changeStatus(status): void
-    +canTransitionTo(status): bool
-    +calculateSAW(): float
+    +reporter(): BelongsTo
+    +category(): BelongsTo
+    +assignee(): BelongsTo
+    +comments(): HasMany
+    +isOverdue(): bool
+    +isCancellable(): bool
 }
 
 class Comment {
@@ -44,52 +52,62 @@ class Comment {
     -user_id: int
     -message: string
     -is_internal: bool
+    -attachments: json
     --
-    +create(): void
-    +update(): void
-    +delete(): void
+    +ticket(): BelongsTo
+    +user(): BelongsTo
 }
 
 class Category {
     -id: int
     -name: string
     -slug: string
+    -description: string
     --
-    +create(): void
-    +update(): void
-    +delete(): void
+    +tickets(): HasMany
+    +knowledgeBases(): HasMany
 }
 
-class Notification {
-    -id: uuid
-    -type: string
-    -notifiable_id: int
-    -data: json
-    -read_at: timestamp
+class Department {
+    -id: int
+    -name: string
     --
-    +create(): void
-    +markAsRead(): void
-    +send(): void
+    +users(): HasMany
 }
 
-class TicketController {
-    -ticketService: TicketService
+class KnowledgeBase {
+    -id: int
+    -title: string
+    -slug: string
+    -content: text
+    -is_published: bool
     --
-    +index(): void
-    +show(id): void
-    +store(request): void
-    +update(id, request): void
-    +destroy(id): void
+    +category(): BelongsTo
+    +author(): BelongsTo
+}
+
+class TicketService {
+    --
+    +createTicket(request, user): Ticket
+    +updateTicket(ticket, payload, user): Ticket
+    +cancelTicket(ticket, user): Ticket
+    +confirmResolution(ticket, user): Ticket
+    +rejectResolution(ticket, reason, user): Ticket
+    +rateTicket(ticket, user, rating): Ticket
+    +getAllTickets(filters, perPage): Paginator
+    +getUserTickets(user, filters): Paginator
 }
 
 class SawService {
-    -configRepository: SawConfigRepository
-    -cache: Cache
+    -criteria: array
+    -weights: array
+    -types: array
     --
-    +calculateScore(ticket): float
-    +normalize(value, max): float
-    +weightedSum(criteria): float
-    +cacheScore(ticket, score): void
+    +calculateScores(): array
+    +getScores(): array
+    -buildDecisionMatrix(): array
+    -normalize(matrix): array
+    -weightedSum(normalized): array
 }
 
 class TicketPolicy {
@@ -99,24 +117,18 @@ class TicketPolicy {
     +update(user, ticket): bool
     +delete(user, ticket): bool
     +comment(user, ticket): bool
+    +cancel(user, ticket): bool
 }
 
-class NotificationService {
-    -notificationRepository: NotificationRepository
-    --
-    +send(user, notification): void
-    +sendBatch(users, notification): void
-    +markAsRead(notification): void
-}
+User "1" -- "*" Ticket : membuat
+User "1" -- "*" Ticket : ditugaskan
+User "1" -- "*" Comment : menulis
+Ticket "1" -- "*" Comment : memiliki
+Category "1" -- "*" Ticket : mengkategorikan
+Department "1" -- "*" User : memiliki
 
-User "1" -- "*" Ticket : "membuat"
-User "1" -- "*" Comment : "menulis"
-Ticket "1" -- "*" Comment : "memiliki"
-Category "1" -- "*" Ticket : "mengkategorikan"
-User "1" -- "*" Notification : "menerima"
-
-TicketController --> SawService : "menggunakan"
-TicketController --> TicketPolicy : "memeriksa"
-TicketController --> NotificationService : "menggunakan"
+TicketService --> Ticket : mengelola
+TicketService --> SawService : menggunakan
+TicketService --> TicketPolicy : memeriksa
 
 @enduml

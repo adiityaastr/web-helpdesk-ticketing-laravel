@@ -27,27 +27,25 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 ┌─────────────────────────────────────────────────────────────┐
 │                    PRESENTATION LAYER                        │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  Nginx 1.26 (Web Server)                            │   │
-│  │  - Reverse Proxy                                    │   │
+│  │  Apache (XAMPP) / php artisan serve                  │   │
+│  │  - Web Server                                       │   │
 │  │  - Static Assets (CSS, JS, Images)                  │   │
-│  │  - SSL/TLS Termination                              │   │
-│  │  - Gzip Compression                                 │   │
-│  │  - Rate Limiting                                    │   │
+│  │  - SSL/TLS Termination (production)                 │   │
 │  └──────────────────────────────────────────────────────┘   │
 └────────────────────────┬─────────────────────────────────────┘
-                         │ FastCGI
+                         │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   APPLICATION LAYER                          │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  PHP-FPM 8.3 (Application Server)                   │   │
+│  │  PHP 8.3 (Application Server)                       │   │
 │  │  ┌────────────────────────────────────────────────┐ │   │
 │  │  │  Laravel 13 Framework                          │ │   │
 │  │  │  - Routing & Controllers                       │ │   │
 │  │  │  - Inertia.js Response                         │ │   │
 │  │  │  - Business Logic                              │ │   │
 │  │  │  - Middleware & Policies                       │ │   │
-│  │  │  - Event & Queue Handling                      │ │   │
+│  │  │  - Event Handling                              │ │   │
 │  │  └────────────────────────────────────────────────┘ │   │
 │  │  ┌────────────────────────────────────────────────┐ │   │
 │  │  │  Services & Repositories                       │ │   │
@@ -64,12 +62,13 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
 │  DATA LAYER  │  │ CACHE LAYER  │  │ QUEUE LAYER  │
 │              │  │              │  │              │
-│ MySQL 8.0    │  │ Redis 7      │  │ Redis Queue  │
-│              │  │              │  │              │
-│ - Users      │  │ - Sessions   │  │ - Notif Jobs │
-│ - Tickets    │  │ - Cache      │  │ - Mail Jobs  │
-│ - Comments   │  │ - SAW Scores │  │ - Async Ops  │
+│ MySQL 8.0    │  │ File Cache   │  │ Sync Queue   │
+│ (XAMPP)      │  │              │  │              │
+│ - Users      │  │ - Sessions   │  │ - Notif      │
+│ - Tickets    │  │ - Cache      │  │ - Sync Ops   │
+│ - Comments   │  │ - SAW Scores │  │              │
 │ - Categories │  │              │  │              │
+│ - Departments│  │              │  │              │
 │ - etc        │  │              │  │              │
 └──────────────┘  └──────────────┘  └──────────────┘
 ```
@@ -100,15 +99,12 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 
 ### 2. **Web Server Layer**
 
-#### Nginx 1.26
-- **Fungsi**: Reverse proxy, static assets, SSL/TLS
+#### Apache (XAMPP) / php artisan serve
+- **Fungsi**: Web server, static assets
 - **Konfigurasi**:
-  - Listen port 80 (HTTP)
-  - Proxy ke PHP-FPM port 9000
+  - Listen port 80 (Apache) atau 8000 (artisan serve)
   - Serve static assets (CSS, JS, images)
-  - Gzip compression level 6
-  - Cache static assets 7 hari
-  - Rate limiting
+  - mod_rewrite untuk Laravel routing
 
 ---
 
@@ -128,19 +124,19 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 - **AuthService**: Authentication & authorization
 
 #### Queue System
-- **Driver**: Redis Queue
-- **Jobs**: SendNotification, ProcessTicket
-- **Worker**: Async processing
+- **Driver**: Sync (synchronous)
+- **Processing**: Langsung diproses saat request
 
 ---
 
 ### 4. **Database Layer**
 
-#### MySQL 8.0
+#### MySQL 8.0 (via XAMPP)
 - **Charset**: utf8mb4 (support emoji)
 - **Collation**: utf8mb4_unicode_ci
 - **Engine**: InnoDB (transaction support)
-- **Tabel**: 8 tabel utama + pivot tables
+- **Tabel**: 9 tabel utama + pivot tables
+- **User**: root (tanpa password)
 
 #### Indexing Strategy
 - Primary key pada semua tabel
@@ -152,11 +148,10 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 
 ### 5. **Cache Layer**
 
-#### Redis 7
-- **Session Storage**: Simpan session user
-- **Cache Store**: Cache query result, SAW scores
-- **Queue Driver**: Redis Queue untuk async jobs
-- **Persistence**: RDB + AOF
+#### File Cache
+- **Session Storage**: Simpan session user di file
+- **Cache Store**: Cache query result, SAW scores di file
+- **Driver**: File-based (storage/framework/cache)
 
 #### Cache Strategy
 - SAW scores: 60 detik
@@ -168,11 +163,10 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 
 ### 6. **Queue Layer**
 
-#### Redis Queue
-- **Job Processing**: Async notification, email
-- **Worker**: PHP-FPM container khusus
-- **Retry**: 3 kali retry jika gagal
-- **Timeout**: 3600 detik per job
+#### Sync Queue
+- **Processing**: Synchronous (langsung diproses)
+- **Notification**: Langsung dikirim saat event trigger
+- **Keuntungan**: Simple, tidak perlu worker terpisah
 
 ---
 
@@ -185,7 +179,7 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
    ↓
 2. React component kirim POST request ke /tickets
    ↓
-3. Nginx terima request, proxy ke PHP-FPM
+3. Apache/artisan serve terima request
    ↓
 4. Laravel route handler (TicketController@store)
    ↓
@@ -202,24 +196,16 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 10. Browser tampilkan success message
 ```
 
-### Alur 2: Kirim Notifikasi (Asynchronous)
+### Alur 2: Kirim Notifikasi (Synchronous)
 
 ```
 1. Event TicketCreated di-dispatch
    ↓
-2. Event listener trigger SendNotificationJob
+2. Event listener trigger SendNotification
    ↓
-3. Job di-push ke Redis Queue
+3. Create Notification record di database
    ↓
-4. Queue worker ambil job dari queue
-   ↓
-5. Execute SendNotificationJob
-   ↓
-6. Create Notification record di database
-   ↓
-7. Broadcast notification ke user (optional)
-   ↓
-8. Job selesai, remove dari queue
+4. Return response ke user
 ```
 
 ### Alur 3: Hitung SAW Score (Cached)
@@ -227,14 +213,14 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 ```
 1. Request list tiket
    ↓
-2. Check Redis cache untuk SAW scores
+2. Check file cache untuk SAW scores
    ↓
 3. Jika cache hit → return cached scores
    ↓
 4. Jika cache miss:
    a. Ambil semua tiket dari database
    b. Hitung SAW score untuk setiap tiket
-   c. Simpan ke Redis cache (60 detik)
+   c. Simpan ke file cache (60 detik)
    d. Return scores
    ↓
 5. Sort tiket berdasarkan score
@@ -251,11 +237,11 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 |----------|-----------|-------|
 | Framework | Laravel | 13 |
 | Language | PHP | 8.3 |
-| Web Server | Nginx | 1.26 |
-| App Server | PHP-FPM | 8.3 |
-| Database | MySQL | 8.0 |
-| Cache | Redis | 7 |
-| Queue | Redis Queue | 7 |
+| Web Server | Apache (XAMPP) | 2.4 |
+| App Server | PHP | 8.3 |
+| Database | MySQL (XAMPP) | 8.0 |
+| Cache | File | - |
+| Queue | Sync | - |
 
 ### Frontend
 | Komponen | Teknologi | Versi |
@@ -270,8 +256,7 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 ### DevOps
 | Komponen | Teknologi | Versi |
 |----------|-----------|-------|
-| Containerization | Docker | 24 |
-| Orchestration | Docker Compose | 2.20 |
+| Local Server | XAMPP/Laragon | Latest |
 | Testing | PHPUnit | 12 |
 | E2E Testing | Playwright | 1.59 |
 
@@ -281,29 +266,21 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 
 ### Development
 ```
-Local Machine
-├── Docker Desktop
-├── docker-compose.yml (8 services)
-├── Nginx (port 8000)
-├── PHP-FPM (internal)
-├── MySQL (port 3306)
-├── Redis (port 6379)
-├── Queue Worker
-├── MailHog (port 8025)
-├── Adminer (port 8080)
-└── Vite Dev Server (port 5173)
+Local Machine (XAMPP/Laragon)
+├── Apache (port 80) atau php artisan serve (port 8000)
+├── MySQL (port 3306, user: root, no password)
+├── PHP 8.3
+├── Node.js + Vite Dev Server (port 5173)
+└── File-based cache & session (storage/framework/)
 ```
 
 ### Production
 ```
 Server
-├── Docker Engine
-├── docker-compose.yml (5 services)
-├── Nginx (port 80/443)
-├── PHP-FPM (internal)
-├── MySQL (internal)
-├── Redis (internal)
-├── Queue Worker
+├── Apache / Nginx (port 80/443)
+├── PHP 8.3
+├── MySQL (port 3306)
+├── File-based cache & session
 └── Monitoring (optional)
 ```
 
@@ -314,15 +291,15 @@ Server
 ### Authentication
 - **Method**: Session-based + Token-based (Sanctum)
 - **Password**: Bcrypt hashing
-- **Session**: Redis storage, 120 menit lifetime
+- **Session**: File storage, 120 menit lifetime
 
 ### Authorization
 - **Method**: Role-Based Access Control (RBAC)
-- **Roles**: admin, staff, customer
+- **Roles**: staff, customer
 - **Policies**: TicketPolicy untuk fine-grained control
 
 ### Data Protection
-- **HTTPS**: SSL/TLS termination di Nginx
+- **HTTPS**: SSL/TLS (production)
 - **CSRF**: Token validation
 - **SQL Injection**: Prepared statements
 - **XSS**: HTML escaping
@@ -332,27 +309,24 @@ Server
 ## 📈 Scalability Considerations
 
 ### Horizontal Scaling
-- **Stateless PHP-FPM**: Bisa scale multiple instances
-- **Redis Session**: Shared session store
+- **Stateless PHP**: Bisa scale multiple instances
+- **File Session**: Bisa migrasi ke Redis jika perlu scale
 - **Database**: Master-slave replication (optional)
-- **Load Balancer**: Nginx upstream (optional)
+- **Load Balancer**: Apache/Nginx upstream (optional)
 
 ### Vertical Scaling
 - **PHP Memory**: 512MB per instance
 - **MySQL Buffer Pool**: 256MB
-- **Redis Memory**: 256MB
-- **Nginx Worker**: Auto-tuned
 
 ### Performance Optimization
 - **Database Indexing**: Composite indexes (status+priority, user_id+status)
 - **Query Optimization**: Eager loading, select specific columns, pagination
-- **Caching**: Redis cache (SAW scores 60s, dashboard 300s), OPcache (256MB)
+- **Caching**: File cache (SAW scores 60s, dashboard 300s), OPcache (256MB)
 - **CDN**: Static assets (optional)
 
 ### Monitoring & Observability
 - **Application Monitoring**: Laravel Telescope (development)
-- **Container Monitoring**: docker stats, docker logs
-- **Health Checks**: Nginx /health endpoint, PHP-FPM /status
+- **Health Checks**: /health endpoint
 - **Logging**: Log channel stack (single + daily)
 
 ---
@@ -362,20 +336,20 @@ Server
 ### Authentication
 - **Method**: Session-based (web) + Token-based (Sanctum - API)
 - **Password**: Bcrypt hashing (12 rounds)
-- **Session**: Redis storage, 120 menit lifetime
+- **Session**: File storage, 120 menit lifetime
 - **Cookie**: Secure, httpOnly, SameSite
 
 ### Authorization
 - **Method**: Role-Based Access Control (RBAC) via Spatie
-- **Roles**: admin (full access), staff (ticket management), customer (own tickets)
+- **Roles**: staff (full access), customer (own tickets)
 - **Policies**: TicketPolicy untuk fine-grained control per model
 
 ### Data Protection
-- **HTTPS**: SSL/TLS termination di Nginx
+- **HTTPS**: SSL/TLS (production)
 - **CSRF**: Token validation (Laravel built-in)
 - **SQL Injection**: Prepared statements (Eloquent ORM)
 - **XSS**: HTML escaping (Blade + React sanitization)
-- **Rate Limiting**: Nginx limit_req + Laravel throttle middleware
+- **Rate Limiting**: Laravel throttle middleware
 - **File Upload**: Size limit 20MB, MIME type whitelist
 
 ### Security Headers
@@ -393,4 +367,4 @@ Server
 
 Arsitektur Helpdesk Ticketing System dirancang sebagai **monolithic application** yang scalable, secure, dan performant. Dengan menggunakan **Inertia.js**, sistem menggabungkan kekuatan Laravel backend dan React frontend tanpa perlu API terpisah.
 
-Deployment via **Docker** memastikan konsistensi antara development dan production, serta memudahkan scaling horizontal.
+Deployment menggunakan **XAMPP/Laragon** untuk development memastikan kemudahan setup dan konsistensi environment.

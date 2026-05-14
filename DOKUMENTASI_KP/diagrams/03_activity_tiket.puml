@@ -26,7 +26,7 @@ else (Berhasil)
     :Kirim event TiketDibuat;
     
     :Hitung skor SAW;
-    :Cache skor ke Redis;
+    :Cache skor;
     
     :Kirim notifikasi ke admin;
     :Catat aktivitas;

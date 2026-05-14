@@ -24,8 +24,8 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 - **Framework**: Laravel 13 (PHP 8.3)
 - **Authentication**: Laravel Sanctum + Session
 - **Authorization**: Spatie Laravel Permission (RBAC)
-- **Queue**: Redis Queue untuk async processing
-- **Cache**: Redis 7 untuk session & cache
+- **Queue**: Sync (synchronous processing)
+- **Cache**: File-based cache & session
 
 ### Frontend
 - **Library**: React 19
@@ -35,10 +35,9 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 - **Build Tool**: Vite 8
 
 ### Database & Infrastructure
-- **Database**: MySQL 8.0
-- **Cache**: Redis 7
-- **Web Server**: Nginx 1.26
-- **Containerization**: Docker + Docker Compose
+- **Database**: MySQL 8.0 (via XAMPP/Laragon)
+- **Cache**: File-based
+- **Web Server**: Apache (XAMPP) / php artisan serve
 - **Testing**: PHPUnit + Playwright
 
 ---
@@ -55,12 +54,12 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 ### 2. **Prioritas Otomatis (SAW)**
    - Hitung skor berdasarkan 5 kriteria
    - Normalisasi & weighted sum
-   - Cache 60 detik untuk performa
+   - Cache file 60 detik untuk performa
    - Ranking otomatis di list tiket
 
 ### 3. **Notifikasi Real-time**
    - Event-driven notification system
-   - Queue worker untuk async processing
+   - Synchronous processing
    - Database storage untuk history
    - Badge unread di UI
 
@@ -77,8 +76,7 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
    - Akses publik untuk customer
 
 ### 6. **Role-Based Access Control**
-   - Admin: Full access
-   - Staff: Kelola tiket, komentar internal
+   - Staff: Full access (kelola tiket, user, kategori, konfigurasi)
    - Customer: Buat tiket, lihat sendiri
 
 ---
@@ -87,8 +85,7 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 
 | Role | Jumlah | Fungsi |
 |------|--------|--------|
-| **Admin** | 1-2 | Kelola semua aspek sistem, konfigurasi SAW, user management |
-| **Staff** | 5-10 | Kelola tiket, assign, komentar internal, resolve |
+| **Staff** | 5-10 | Kelola semua aspek sistem, konfigurasi SAW, user management, assign tiket, komentar internal, resolve |
 | **Customer** | Unlimited | Buat tiket, lihat status, komentar publik, beri rating |
 
 ---
@@ -119,7 +116,7 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 - ✅ Laravel 13 (Inertia.js, Sanctum, Queue)
 - ✅ React 19 (Hooks, state management)
 - ✅ Database design & optimization
-- ✅ Docker & containerization
+- ✅ Local development environment (XAMPP/Laragon)
 - ✅ Algorithm implementation (SAW)
 - ✅ Testing & debugging
 
@@ -127,7 +124,7 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 - ✅ Scalability & performance
 - ✅ Security best practices
 - ✅ Caching strategy
-- ✅ Queue system
+- ✅ Synchronous queue system
 - ✅ Monitoring & logging
 
 ---
@@ -136,10 +133,10 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 
 1. **User-friendly Interface** - React 19 + Tailwind CSS 4, responsive design
 2. **Prioritas Otomatis** - SAW algorithm dengan 5 kriteria multi-weighted
-3. **Real-time Notification** - Event-driven dengan Redis queue worker
-4. **Scalable Architecture** - Docker containerized, horizontal scaling ready
+3. **Real-time Notification** - Event-driven notification system
+4. **Simple Architecture** - Monolithic, mudah di-deploy dan di-maintain
 5. **Secure Authentication** - Sanctum token + session-based, RBAC dengan Spatie
-6. **Performance Optimized** - OPcache (256MB), Redis caching, composite indexes
+6. **Performance Optimized** - OPcache, file caching, composite indexes
 7. **Well-tested** - 82% code coverage, 45 test cases (unit, feature, integration)
 8. **Well-documented** - 75 halaman dokumentasi + 10 PlantUML diagrams
 9. **Database Optimized** - Eager loading, query optimization, proper indexing
@@ -164,22 +161,18 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
 
 ### Development
 ```bash
-docker compose up -d
-make fresh
+# Pastikan XAMPP/Laragon sudah berjalan (Apache + MySQL)
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm install
 npm run build
-```
-
-### Production
-```bash
-docker compose up -d --build
-docker compose exec app php artisan migrate --force
-docker compose exec app php artisan db:seed --force
+php artisan serve
 ```
 
 ### Akses
 - **App**: http://localhost:8000
-- **Adminer**: http://localhost:8080
-- **MailHog**: http://localhost:8025
 
 ---
 

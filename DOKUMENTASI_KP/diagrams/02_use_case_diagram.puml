@@ -4,8 +4,7 @@ skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
 actor "Pelanggan" as customer
-actor "Staff" as staff
-actor "Admin" as admin
+actor "Staff IT" as staff
 actor "Sistem" as system
 
 rectangle "Helpdesk Ticketing System" {
@@ -15,18 +14,17 @@ rectangle "Helpdesk Ticketing System" {
     usecase "UC4: Upload Lampiran" as uc4
     usecase "UC5: Beri Rating" as uc5
     usecase "UC6: Batalkan Tiket" as uc6
-    
-    usecase "UC7: Assign Tiket" as uc7
-    usecase "UC8: Update Status" as uc8
-    usecase "UC9: Komentar Internal" as uc9
-    usecase "UC10: Lihat Dashboard" as uc10
-    usecase "UC11: Kelola User" as uc11
-    usecase "UC12: Kelola Kategori" as uc12
-    
-    usecase "UC13: Konfigurasi SAW" as uc13
-    usecase "UC14: Lihat Analytics" as uc14
-    usecase "UC15: Kelola Basis Pengetahuan" as uc15
-    
+    usecase "UC7: Konfirmasi Penyelesaian" as uc7
+
+    usecase "UC8: Assign Tiket" as uc8
+    usecase "UC9: Update Status" as uc9
+    usecase "UC10: Komentar Internal" as uc10
+    usecase "UC11: Lihat Dashboard" as uc11
+    usecase "UC12: Kelola User" as uc12
+    usecase "UC13: Kelola Kategori" as uc13
+    usecase "UC14: Kelola Basis Pengetahuan" as uc14
+    usecase "UC15: Kelola Departemen" as uc15
+
     usecase "UC16: Kirim Notifikasi" as uc16
     usecase "UC17: Hitung Skor SAW" as uc17
     usecase "UC18: Catat Aktivitas" as uc18
@@ -38,34 +36,29 @@ customer --> uc3
 customer --> uc4
 customer --> uc5
 customer --> uc6
+customer --> uc7
 
 staff --> uc2
 staff --> uc3
-staff --> uc7
 staff --> uc8
 staff --> uc9
 staff --> uc10
-
-admin --> uc7
-admin --> uc8
-admin --> uc10
-admin --> uc11
-admin --> uc12
-admin --> uc13
-admin --> uc14
-admin --> uc15
+staff --> uc11
+staff --> uc12
+staff --> uc13
+staff --> uc14
+staff --> uc15
 
 system --> uc16
 system --> uc17
 system --> uc18
 
 uc1 .> uc16 : <<include>>
-uc1 .> uc17 : <<include>>
 uc1 .> uc18 : <<include>>
 
-uc8 .> uc16 : <<include>>
-uc8 .> uc17 : <<include>>
-uc8 .> uc18 : <<include>>
+uc9 .> uc16 : <<include>>
+uc9 .> uc17 : <<include>>
+uc9 .> uc18 : <<include>>
 
 uc3 .> uc18 : <<include>>
 
@@ -75,23 +68,18 @@ note right of uc1
 end note
 
 note right of uc7
-  Staff/Admin assign tiket
+  Pelanggan konfirmasi/tolak
+  penyelesaian tiket
+end note
+
+note right of uc8
+  Staff assign tiket
   ke staff yang tepat
-end note
-
-note right of uc13
-  Admin konfigurasi bobot
-  kriteria SAW (C1-C5)
-end note
-
-note right of uc16
-  Sistem kirim notifikasi
-  ke user yang terkait
 end note
 
 note right of uc17
   Sistem hitung skor SAW
-  berdasarkan 5 kriteria
+  berdasarkan 5 kriteria (C1-C5)
 end note
 
 @enduml

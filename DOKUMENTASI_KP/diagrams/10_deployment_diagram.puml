@@ -7,39 +7,21 @@ skinparam node {
     BorderColor #388E3C
 }
 
-node "Host Docker" as host {
-    node "Container Nginx" as nginx {
-        artifact "nginx:1.26-alpine" as nginx_img
-        artifact "default.conf" as nginx_conf
-    }
-    
-    node "Container PHP-FPM" as phpfpm {
-        artifact "php:8.3-fpm-alpine" as php_img
+node "Server Lokal (XAMPP/Laragon)" as host {
+    node "Apache/PHP 8.3" as apache {
         artifact "Laravel 13" as laravel
         artifact "Inertia.js" as inertia
+        artifact "React 19" as react
     }
-    
-    node "Container MySQL" as mysql {
-        artifact "mysql:8.0" as mysql_img
-        artifact "Database" as db_data
+
+    node "MySQL 8.0" as mysql {
+        artifact "Database helpdesk_db" as db_data
     }
-    
-    node "Container Redis" as redis {
-        artifact "redis:7-alpine" as redis_img
-        artifact "Cache & Session" as redis_data
-    }
-    
-    node "Container Queue Worker" as queue {
-        artifact "php:8.3-fpm-alpine" as queue_img
-        artifact "Worker Antrian" as queue_worker
-    }
-    
-    node "Container MailHog" as mailhog {
-        artifact "mailhog/mailhog" as mailhog_img
-    }
-    
-    node "Container Adminer" as adminer {
-        artifact "adminer:4.8.1" as adminer_img
+
+    node "File Storage" as storage {
+        artifact "Session (file)" as session
+        artifact "Cache (file)" as cache
+        artifact "Uploads" as uploads
     }
 }
 
@@ -47,56 +29,31 @@ node "Mesin Klien" as client {
     artifact "Browser" as browser
 }
 
-node "Layanan Eksternal" as external {
-    artifact "GitHub" as github
-    artifact "Docker Hub" as dockerhub
+node "Build Tools" as tools {
+    artifact "Node.js + Vite" as vite
+    artifact "Tailwind CSS 4" as tailwind
 }
 
-browser --> nginx : HTTP:8000
-nginx --> phpfpm : FastCGI:9000
-phpfpm --> mysql : TCP:3306
-phpfpm --> redis : TCP:6379
-phpfpm --> queue : Kirim Job
-queue --> redis : Ambil Job
-queue --> mysql : Simpan Hasil
-phpfpm --> mailhog : SMTP:1025
-adminer --> mysql : TCP:3306
+browser --> apache : HTTP:8000
+apache --> mysql : TCP:3306
+apache --> storage : File I/O
+tools --> apache : Build Assets
 
-nginx_img -.-> dockerhub : tarik
-php_img -.-> dockerhub : tarik
-mysql_img -.-> dockerhub : tarik
-redis_img -.-> dockerhub : tarik
-laravel -.-> github : clone
-
-note right of nginx
-  Pemetaan Port:
-  8000 -> 80
-end note
-
-note right of phpfpm
-  Pemetaan Port:
-  internal -> 9000
+note right of apache
+  php artisan serve
+  Port: 8000
 end note
 
 note right of mysql
-  Pemetaan Port:
-  3306 -> 3306
+  Host: 127.0.0.1
+  User: root
+  DB: helpdesk_db
 end note
 
-note right of redis
-  Pemetaan Port:
-  6379 -> 6379
-end note
-
-note right of mailhog
-  Pemetaan Port:
-  8025 -> 8025
-  1025 -> 1025
-end note
-
-note right of adminer
-  Pemetaan Port:
-  8080 -> 8080
+note right of storage
+  storage/framework/sessions
+  storage/framework/cache
+  storage/app/public
 end note
 
 @enduml

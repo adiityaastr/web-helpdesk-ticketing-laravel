@@ -378,15 +378,9 @@ class InvalidateSawCache
 ```
 Event triggered (TicketCreated, StatusChanged, etc)
     ↓
-Event listener dispatch NotificationJob
+Event listener create Notification
     ↓
-Job di-push ke Redis Queue
-    ↓
-Queue worker ambil job
-    ↓
-Create Notification record di database
-    ↓
-Broadcast notification (optional)
+Create Notification record di database (sync)
     ↓
 User melihat notifikasi di UI
 ```

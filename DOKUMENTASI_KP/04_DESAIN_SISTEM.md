@@ -25,16 +25,11 @@ Lihat file: `diagrams/02_use_case_diagram.puml`
 | UC8 | Update Status | Staff mengubah status tiket (open → in_progress → resolved → closed) |
 | UC9 | Add Internal Comment | Staff menambahkan komentar internal (tidak terlihat customer) |
 | UC10 | View Dashboard | Staff melihat dashboard dengan statistik & beban kerja |
-
-#### **Admin Use Cases**
-
-| UC | Nama | Deskripsi |
-|----|----|-----------|
-| UC11 | Manage User | Admin create, read, update, delete user & assign role |
-| UC12 | Manage Category | Admin create, read, update, delete kategori tiket |
-| UC13 | Configure SAW | Admin konfigurasi bobot kriteria SAW (C1-C5) |
-| UC14 | View Analytics | Admin melihat analytics & reporting |
-| UC15 | Manage Knowledge Base | Admin create, read, update, delete artikel knowledge base |
+| UC11 | Manage User | Staff create, read, update, delete user & assign role |
+| UC12 | Manage Category | Staff create, read, update, delete kategori tiket |
+| UC13 | Configure SAW | Staff konfigurasi bobot kriteria SAW (C1-C5) |
+| UC14 | View Analytics | Staff melihat analytics & reporting |
+| UC15 | Manage Knowledge Base | Staff create, read, update, delete artikel knowledge base |
 
 #### **System Use Cases**
 
@@ -64,10 +59,10 @@ Lihat file: `diagrams/03_activity_tiket.puml`
    - Generate UUID
    - Set status = "open"
    - Hitung SAW score
-   - Send notification ke admin
+   - Send notification ke staff
    - Log activity
-6. Admin review tiket
-7. Assign ke staff (optional)
+6. Staff review tiket
+7. Assign ke staff lain (optional)
 8. Staff handle tiket:
    - Baca deskripsi & lampiran
    - Add comment (public/internal)
@@ -86,7 +81,7 @@ Lihat file: `diagrams/04_activity_saw.puml`
 
 **Alur**:
 1. Request list tiket
-2. Check Redis cache
+2. Check file cache
 3. Jika cache hit → return cached scores
 4. Jika cache miss:
    - Ambil semua tiket dari database
@@ -99,7 +94,7 @@ Lihat file: `diagrams/04_activity_saw.puml`
      - C5 (Complexity): r5 = C5 / max(C5)
    - **Weighted Sum**: V(i) = (W1×r1) + (W2×r2) + (W3×r3) + (W4×r4) + (W5×r5)
    - **Ranking**: Sort tiket by V(i) DESC
-   - Cache scores ke Redis (TTL 60 detik)
+   - Cache scores ke file (TTL 60 detik)
 5. Return sorted tiket dengan score
 6. Render di frontend
 
@@ -126,7 +121,7 @@ Validasi input
               ├─ User tidak aktif → Error
               └─ User aktif → Generate session token
                   ↓
-                Store session di Redis (120 menit)
+                Store session di file (120 menit)
                 Generate API token (Sanctum)
                 Create auth cookie (secure, httpOnly)
                 Log login activity
@@ -139,7 +134,7 @@ Validasi input
 
 **Security Measures**:
 - Password hashing (bcrypt)
-- Session storage (Redis)
+- Session storage (file)
 - Secure cookie (httpOnly, secure flag)
 - Activity logging
 - Rate limiting (optional)
@@ -167,10 +162,10 @@ Validasi input
         Set user_id, category_id, status, priority
         Generate UUID
         Hitung SAW score
-        Cache score ke Redis
+        Cache score ke file
           ↓
         Dispatch TicketCreated event
-        Send notification ke admin
+        Send notification ke staff
         Log activity
           ↓
         Return success response
@@ -204,8 +199,8 @@ Lihat file: `diagrams/08_sequence_tiket.puml`
 Customer → Browser: Buka form buat tiket
 Browser → Browser: Render form
 Customer → Browser: Isi data & submit
-Browser → Nginx: POST /tickets
-Nginx → Controller: Route ke TicketController@store
+Browser → Server: POST /tickets
+Server → Controller: Route ke TicketController@store
 Controller → Controller: Validasi input
 Controller → Service: createTicket(data)
 Service → DB: INSERT ticket
@@ -213,19 +208,12 @@ DB → Service: ticket_id
 Service → Cache: calculateSAW(ticket)
 Cache → Service: saw_score
 Service → DB: UPDATE ticket SAW score
-Service → Queue: Dispatch TicketCreatedJob
-Queue → Queue: Queue job
+Service → Notification: Send notification (sync)
+Notification → DB: INSERT notification
 Service → Controller: return ticket
 Controller → Browser: Inertia response
 Browser → Browser: Render success
 Browser → Customer: Tampilkan detail tiket
-
-[Async Process]
-Queue → Notification: Execute SendNotificationJob
-Notification → DB: INSERT notification
-Notification → DB: UPDATE notification read_at
-Notification → Browser: Broadcast notification (optional)
-Browser → Customer: Tampilkan notifikasi
 ```
 
 ---
@@ -308,13 +296,11 @@ Ticket dibuat
 
 | Komponen A | Komponen B | Protokol | Tujuan |
 |-----------|-----------|----------|--------|
-| Browser | Nginx | HTTP/HTTPS | Request web assets |
-| Nginx | PHP-FPM | FastCGI | Forward request ke Laravel |
+| Browser | Apache/Server | HTTP/HTTPS | Request web assets |
+| Server | Laravel | PHP | Forward request ke Laravel |
 | Laravel | MySQL | TCP 3306 | Query database |
-| Laravel | Redis | TCP 6379 | Cache & session |
-| Laravel | Queue | Redis | Dispatch job |
-| Queue | MySQL | TCP 3306 | Store notification |
-| Laravel | MailHog | SMTP 1025 | Kirim email |
+| Laravel | File Cache | Filesystem | Cache & session |
+| Laravel | Notification | Sync | Send notification |
 
 ### Data Flow Diagram
 
@@ -333,7 +319,7 @@ Ticket dibuat
 ## 📈 Kesimpulan
 
 Desain sistem Helpdesk Ticketing mencakup:
-- **18 use case** untuk 3 role (customer, staff, admin)
+- **18 use case** untuk 2 role (customer, staff)
 - **3 activity diagram** untuk alur utama
 - **2 flowchart** untuk proses kritis
 - **1 sequence diagram** untuk interaksi komponen

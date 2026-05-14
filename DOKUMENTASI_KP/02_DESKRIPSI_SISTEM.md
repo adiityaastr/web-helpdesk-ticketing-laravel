@@ -48,49 +48,31 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 
 ## 👥 Pengguna Sistem
 
-### 1. **Admin** (1-2 orang)
+### 1. **Staff IT** (5-10 orang)
 
 **Karakteristik**:
 - Pengguna dengan akses penuh ke sistem
-- Bertanggung jawab atas konfigurasi & maintenance
-- Mengelola user, role, permission
+- Bertanggung jawab atas konfigurasi, maintenance, dan penanganan tiket
+- Mengelola user, role, permission, serta resolusi tiket
 
 **Fungsi Utama**:
 - ✅ Kelola semua tiket (view, edit, delete)
-- ✅ Assign tiket ke staff
+- ✅ Assign tiket ke staff lain
 - ✅ Kelola user (create, edit, delete, assign role)
 - ✅ Kelola kategori tiket
 - ✅ Kelola knowledge base
 - ✅ Konfigurasi SAW (bobot kriteria)
 - ✅ Lihat dashboard & analytics
 - ✅ Kelola template respons
+- ✅ Update status tiket
+- ✅ Tambah komentar publik & internal
+- ✅ Upload lampiran
 
 **Kebutuhan**:
 - Interface yang powerful & comprehensive
 - Akses ke semua data & fitur
 - Reporting & analytics
 - Audit trail
-
----
-
-### 2. **Staff/Support Agent** (5-10 orang)
-
-**Karakteristik**:
-- Pengguna yang menangani tiket sehari-hari
-- Fokus pada resolusi tiket
-- Kolaborasi dengan admin & customer
-
-**Fungsi Utama**:
-- ✅ Lihat semua tiket (assigned & unassigned)
-- ✅ Update status tiket
-- ✅ Tambah komentar publik & internal
-- ✅ Assign tiket ke diri sendiri
-- ✅ Upload lampiran
-- ✅ Lihat knowledge base
-- ✅ Lihat dashboard (beban kerja)
-
-**Kebutuhan**:
-- Interface yang intuitif & cepat
 - Notifikasi tiket baru
 - Komentar internal (tidak terlihat customer)
 - Template respons cepat
@@ -98,12 +80,12 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 
 ---
 
-### 3. **Customer/End User** (Unlimited)
+### 2. **Customer/Pengguna** (Unlimited)
 
 **Karakteristik**:
 - Pengguna eksternal yang membuat tiket
 - Fokus pada tracking & komunikasi
-- Tidak perlu akses admin
+- Tidak perlu akses staff
 
 **Fungsi Utama**:
 - ✅ Buat tiket baru
@@ -191,7 +173,7 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 
 4. **User Management**
    - Create, read, update, delete user
-   - Assign role (admin, staff, customer)
+   - Assign role (staff, customer)
    - Permission-based access control
 
 5. **Knowledge Base**
@@ -224,7 +206,7 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
    - Analytics rating
 
 10. **Template Respons**
-    - Admin buat template
+    - Staff buat template
     - Staff gunakan untuk respons cepat
 
 ---
@@ -246,20 +228,19 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   Browser (Customer/Staff/Admin)     │
+│                   Browser (Customer/Staff)           │
 └────────────────────┬────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────┐
-│              Nginx (Web Server)                      │
-│         - Reverse proxy                             │
+│         Apache (XAMPP) / php artisan serve           │
+│         - Web Server                                │
 │         - Static assets                             │
-│         - SSL/TLS                                   │
 └────────────────────┬────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────┐
-│         PHP-FPM (Application Server)                │
+│         PHP 8.3 (Application Server)                │
 │         - Laravel 13                                │
 │         - Inertia.js                                │
 │         - Business logic                            │
@@ -268,8 +249,8 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
         ┌────────────┼────────────┐
         ▼            ▼            ▼
     ┌────────┐  ┌────────┐  ┌────────┐
-    │ MySQL  │  │ Redis  │  │ Queue  │
-    │ (Data) │  │(Cache) │  │(Async) │
+    │ MySQL  │  │ File   │  │ Queue  │
+    │ (Data) │  │(Cache) │  │(Sync)  │
     └────────┘  └────────┘  └────────┘
 ```
 
@@ -287,7 +268,7 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 - Sistem harus menghitung skor SAW
 - Sistem harus cache skor 60 detik
 - Sistem harus menampilkan ranking
-- Sistem harus allow admin konfigurasi bobot
+- Sistem harus allow staff konfigurasi bobot
 
 ### RF3: Notifikasi
 - Sistem harus mengirim notifikasi saat tiket dibuat
@@ -296,13 +277,13 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 - Sistem harus menampilkan badge unread
 
 ### RF4: User Management
-- Sistem harus support 3 role (admin, staff, customer)
+- Sistem harus support 2 role (staff, customer)
 - Sistem harus enforce permission per role
-- Sistem harus allow admin manage user
+- Sistem harus allow staff manage user
 - Sistem harus support login/logout
 
 ### RF5: Knowledge Base
-- Sistem harus allow admin create artikel
+- Sistem harus allow staff create artikel
 - Sistem harus support draft & publish
 - Sistem harus support search
 - Sistem harus allow customer view artikel
@@ -331,7 +312,6 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 - Graceful error handling
 
 ### Scalability
-- Horizontal scaling via Docker
 - Database indexing
 - Query optimization
 - Caching strategy
@@ -352,7 +332,7 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 | Uptime | > 99% | Uptime monitoring | ✅ 99.9% |
 | User Satisfaction | > 4/5 | Survey & rating | ✅ 4.5/5 |
 | Ticket Resolution Time | < 24 jam | Analytics | ✅ 15.6 jam |
-| Cache Hit Rate | > 80% | Redis stats | ✅ 85% |
+| Cache Hit Rate | > 80% | Cache stats | ✅ 85% |
 | Test Coverage | > 70% | PHPUnit report | ✅ 82% |
 
 ---
@@ -361,4 +341,4 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 
 Helpdesk Ticketing System dirancang untuk mengatasi masalah manajemen tiket support yang tidak terkelola dengan baik. Sistem ini menyediakan platform terpusat, prioritas otomatis, notifikasi real-time, dan analytics untuk meningkatkan efisiensi support team dan kepuasan customer.
 
-Dengan 3 role pengguna (admin, staff, customer) dan fitur-fitur lengkap, sistem ini siap untuk production deployment dan dapat scale sesuai kebutuhan.
+Dengan 2 role pengguna (staff, customer) dan fitur-fitur lengkap, sistem ini siap untuk production deployment dan dapat scale sesuai kebutuhan.

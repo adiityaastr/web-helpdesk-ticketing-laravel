@@ -10,11 +10,21 @@ skinparam entity {
 entity "users\n(Pengguna)" as users {
     *id : INT
     --
+    employee_number : VARCHAR (UNIQUE)
     name : VARCHAR
     email : VARCHAR (UNIQUE)
     password : VARCHAR
     phone : VARCHAR
-    department : VARCHAR
+    position : VARCHAR
+    department_id : INT (FK, nullable)
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "departments\n(Departemen)" as departments {
+    *id : INT
+    --
+    name : VARCHAR
     created_at : TIMESTAMP
     updated_at : TIMESTAMP
 }
@@ -44,8 +54,8 @@ entity "tickets\n(Tiket)" as tickets {
     assigned_to : INT (FK, nullable)
     title : VARCHAR
     description : TEXT
-    priority : ENUM
-    status : ENUM
+    priority : ENUM(low,medium,high,critical)
+    status : ENUM(open,in_progress,resolved,closed,cancelled)
     sla_deadline : TIMESTAMP
     resolved_at : TIMESTAMP
     resolved_confirmed_at : TIMESTAMP
@@ -74,6 +84,7 @@ entity "categories\n(Kategori)" as categories {
     name : VARCHAR
     slug : VARCHAR (UNIQUE)
     description : TEXT
+    deleted_at : TIMESTAMP
     created_at : TIMESTAMP
     updated_at : TIMESTAMP
 }
@@ -117,13 +128,14 @@ entity "saw_configurations\n(Konfigurasi SAW)" as saw_configurations {
     --
     code : VARCHAR (UNIQUE)
     name : VARCHAR
-    type : ENUM
+    type : ENUM(benefit,cost)
     weight : DECIMAL
     sort_order : INT
     created_at : TIMESTAMP
     updated_at : TIMESTAMP
 }
 
+departments ||--o{ users : "memiliki"
 users ||--o{ model_has_roles : "memiliki"
 roles ||--o{ model_has_roles : "memiliki"
 

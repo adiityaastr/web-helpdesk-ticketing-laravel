@@ -19,89 +19,61 @@ skinparam package {
 }
 
 package "LAYER KLIEN" as client_layer #E1F5FE {
-    component [Browser\n(React 19)] as browser
+    component [Browser\n(React 19 + Inertia.js)] as browser
 }
 
 package "LAYER PRESENTASI" as pres_layer #FFF3E0 {
-    component [Nginx 1.26\nWeb Server] as nginx
+    component [Apache / PHP Built-in Server\nPort 8000] as webserver
 }
 
 package "LAYER APLIKASI" as app_layer #F3E5F5 {
-    component [PHP-FPM 8.3\nLaravel 13] as phpfpm
-    component [Service\n(SAW, Notifikasi)] as services
-    component [Controller\n(Tiket, User, dsb)] as controllers
+    component [PHP 8.3\nLaravel 13] as phpfpm
+    component [Service\n(SAW, Notifikasi, Tiket)] as services
+    component [Controller\n(Admin, Portal, API)] as controllers
+    component [Middleware\n(Auth, Role, CSRF)] as middleware
 }
 
 package "LAYER DATA" as data_layer #E8F5E9 {
     component [MySQL 8.0\nDatabase] as mysql
+    component [File Storage\nSession & Cache] as filestorage
 }
 
-package "LAYER CACHE" as cache_layer #E0F7FA {
-    component [Redis 7\nCache & Session] as redis
-}
-
-package "LAYER ANTRIAN" as queue_layer #FCE4EC {
-    component [Redis Antrian\nWorker] as queue
-}
-
-package "LAYAR EKSTERNAL" as ext_layer #F5F5F5 {
-    component [MailHog\nTesting Email] as mailhog
-    component [Adminer\nManajemen DB] as adminer
-}
-
-browser --> nginx : HTTP/HTTPS
-nginx --> phpfpm : FastCGI
-phpfpm --> controllers : Route
+browser --> webserver : HTTP
+webserver --> middleware : Request
+middleware --> controllers : Route
 controllers --> services : Logika Bisnis
-services --> mysql : Query
-services --> redis : Cache/Session
-phpfpm --> queue : Kirim Job
-queue --> redis : Ambil Job
-queue --> mysql : Simpan Hasil
-phpfpm --> mailhog : Kirim Email
-adminer --> mysql : Kelola DB
+services --> mysql : Query (Eloquent)
+services --> filestorage : Cache/Session
 
 note right of browser
-  Komponen React
-  Tailwind CSS
-  Inertia.js Client
+  Komponen React 19
+  Tailwind CSS 4
+  Chart.js
 end note
 
-note right of nginx
-  Reverse Proxy
-  Aset Statis
-  SSL/TLS
-  Kompresi Gzip
-end note
-
-note right of phpfpm
-  Penangan Request
-  Middleware
-  Cek Policy
+note right of webserver
+  XAMPP / Laragon
+  php artisan serve
 end note
 
 note right of services
-  SawService
-  NotificationService
   TicketService
+  SawService
+  DashboardService
+  NotificationService
+  CommentService
 end note
 
 note right of mysql
-  8 Tabel
+  9 Tabel Utama
   Engine InnoDB
   Charset utf8mb4
 end note
 
-note right of redis
-  Penyimpanan Session
-  Cache Query
-  Skor SAW
-end note
-
-note right of queue
-  Pekerjaan Async
-  Notifikasi
-  Pengiriman Email
+note right of filestorage
+  SESSION_DRIVER=file
+  CACHE_STORE=file
+  QUEUE_CONNECTION=sync
 end note
 
 @enduml

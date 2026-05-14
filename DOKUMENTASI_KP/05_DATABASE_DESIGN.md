@@ -17,20 +17,26 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
-    department VARCHAR(100),
+    employee_number VARCHAR(50),
+    position VARCHAR(100),
+    department_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+    
     INDEX idx_email (email),
-    INDEX idx_department (department)
+    INDEX idx_department_id (department_id),
+    INDEX idx_employee_number (employee_number)
 );
 ```
 
 **Deskripsi**:
-- Menyimpan data user (admin, staff, customer)
+- Menyimpan data user (staff, customer)
 - Email unique untuk login
 - Password di-hash dengan bcrypt
-- Phone & department optional
+- Phone, employee_number, position optional
+- department_id relasi ke tabel departments
 
 ---
 
@@ -47,7 +53,6 @@ CREATE TABLE roles (
 ```
 
 **Data Default**:
-- admin
 - staff
 - customer
 
@@ -160,10 +165,17 @@ CREATE TABLE categories (
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
     
-    INDEX idx_slug (slug)
+    INDEX idx_slug (slug),
+    INDEX idx_deleted_at (deleted_at)
 );
 ```
+
+**Deskripsi**:
+- Kategori tiket dengan soft deletes
+- Kategori yang dihapus tidak benar-benar hilang dari database
+- Tiket yang sudah menggunakan kategori tetap terjaga integritasnya
 
 **Data Default**:
 - Hardware
@@ -174,7 +186,29 @@ CREATE TABLE categories (
 
 ---
 
-### 7. **knowledge_bases** - Tabel Basis Pengetahuan
+### 7. **departments** - Tabel Departemen
+
+```sql
+CREATE TABLE departments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_code (code)
+);
+```
+
+**Deskripsi**:
+- Menyimpan data departemen organisasi
+- Digunakan untuk mengelompokkan user berdasarkan departemen
+- Code unique sebagai identifier singkat
+
+---
+
+### 8. **knowledge_bases** - Tabel Basis Pengetahuan
 
 ```sql
 CREATE TABLE knowledge_bases (
@@ -205,7 +239,7 @@ CREATE TABLE knowledge_bases (
 
 ---
 
-### 8. **activity_logs** - Tabel Log Aktivitas
+### 9. **activity_logs** - Tabel Log Aktivitas
 
 ```sql
 CREATE TABLE activity_logs (
@@ -232,7 +266,7 @@ CREATE TABLE activity_logs (
 
 ---
 
-### 9. **notifications** - Tabel Notifikasi
+### 10. **notifications** - Tabel Notifikasi
 
 ```sql
 CREATE TABLE notifications (
@@ -258,7 +292,7 @@ CREATE TABLE notifications (
 
 ---
 
-### 10. **saw_configurations** - Tabel Konfigurasi SAW
+### 11. **saw_configurations** - Tabel Konfigurasi SAW
 
 ```sql
 CREATE TABLE saw_configurations (
@@ -291,6 +325,8 @@ CREATE TABLE saw_configurations (
 ### Foreign Key Relationships
 
 ```
+departments (1) ──── (M) users (department_id)
+
 users (1) ──── (M) tickets (user_id)
 users (1) ──── (M) tickets (assigned_to)
 users (1) ──── (M) comments (user_id)
@@ -405,10 +441,11 @@ Semua tabel sudah dinormalisasi ke **3NF (Third Normal Form)**:
 ## 🎯 Kesimpulan
 
 Database design Helpdesk Ticketing System mencakup:
-- **10 tabel utama** dengan relasi yang jelas
+- **11 tabel utama** dengan relasi yang jelas
 - **Proper indexing** untuk performa optimal
 - **Cascade rules** untuk data integrity
 - **Enum types** untuk data consistency
+- **Soft deletes** pada categories
 - **Audit trail** untuk compliance
 - **Flexible design** untuk future expansion
 
