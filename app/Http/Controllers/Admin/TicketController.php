@@ -40,9 +40,9 @@ class TicketController extends Controller
         return Inertia::render('Admin/Tickets/Index', [
             'tickets' => TicketResource::collection($tickets),
             'filters' => $request->only(['status', 'priority', 'category_id', 'search']),
-            'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
+            'statuses' => ['open', 'in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
-            'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name')->orderBy('name')->get()),
+            'categories' => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray(),
         ]);
     }
 
@@ -57,7 +57,7 @@ class TicketController extends Controller
             'comments' => $detail['comments'],
             'activityLogs' => $detail['activityLogs'],
             'categories' => Cache::remember('reference_categories', CacheManager::TTL_MEDIUM, fn () => Category::query()->select('id', 'name')->orderBy('name')->get()->toArray()),
-            'staffUsers' => User::role('staff')->select('id', 'name')->orderBy('name')->get(),
+            'staffUsers' => User::role('staff')->select('id', 'name')->orderBy('name')->get()->toArray(),
             'statuses' => ['in_progress', 'resolved', 'closed', 'cancelled'],
             'priorities' => ['low', 'medium', 'high', 'critical'],
         ]);

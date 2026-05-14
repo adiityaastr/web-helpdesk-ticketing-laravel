@@ -52,8 +52,9 @@ composer-setup.php
 # Logs
 *.log
 
-# Docker (override lokal)
-docker-compose.override.yml
+# Local scripts
+art.bat
+serve.bat
 
 # Playwright
 /test-results/

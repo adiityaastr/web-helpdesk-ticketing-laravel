@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
@@ -49,7 +48,7 @@ class UserController extends Controller
             'filters' => $request->only(['search', 'role']),
             'roles' => ['customer', 'staff'],
             'positions' => ['Manager', 'SPV', 'Staff'],
-            'departments' => Cache::rememberForever('reference_departments', fn () => Department::query()->select('id', 'name')->orderBy('name')->get()),
+            'departments' => Department::query()->select('id', 'name')->orderBy('name')->get()->toArray(),
         ]);
     }
 
@@ -83,7 +82,7 @@ class UserController extends Controller
             'password' => Hash::make($request->string('password')),
         ]);
 
-        $user->assignRole($request->string('role'));
+        $user->assignRole($request->input('role'));
 
         return redirect()->route('admin.users.index')->with('success', 'Pengguna berhasil ditambahkan.');
     }
@@ -109,7 +108,7 @@ class UserController extends Controller
             ...($request->filled('password') ? ['password' => Hash::make($request->string('password'))] : []),
         ]);
 
-        $user->syncRoles([$request->string('role')]);
+        $user->syncRoles([$request->input('role')]);
 
         return redirect()->route('admin.users.index')->with('success', 'Pengguna berhasil diperbarui.');
     }
