@@ -146,8 +146,8 @@ class TicketTest extends TestCase
         // Arrange
         $customer = User::factory()->create();
         $customer->assignRole('customer');
-        $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $staff = User::factory()->create();
+        $staff->assignRole('staff');
         $category = Category::factory()->create();
 
         // Act
@@ -160,7 +160,7 @@ class TicketTest extends TestCase
 
         // Assert
         $this->assertDatabaseHas('notifications', [
-            'notifiable_id' => $admin->id,
+            'notifiable_id' => $staff->id,
             'type' => 'ticket_created',
         ]);
     }
@@ -337,17 +337,17 @@ class TicketPolicyTest extends TestCase
     }
 
     /**
-     * Test: Admin can delete all tickets
+     * Test: Staff can delete all tickets
      */
-    public function test_admin_can_delete_all_tickets()
+    public function test_staff_can_delete_all_tickets()
     {
         // Arrange
-        $admin = User::factory()->create();
-        $admin->assignRole('admin');
+        $staff = User::factory()->create();
+        $staff->assignRole('staff');
         $ticket = Ticket::factory()->create();
 
         // Act & Assert
-        $this->assertTrue($admin->can('delete', $ticket));
+        $this->assertTrue($staff->can('delete', $ticket));
     }
 
     /**
@@ -434,7 +434,7 @@ Memory:  18.50 MB
 #### Integration Tests (10 tests)
 - ✅ Event dispatching
 - ✅ Notification sending
-- ✅ Queue processing
+- ✅ Synchronous processing
 - ✅ Database transactions
 
 ---

@@ -20,9 +20,9 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 
 ### 1. **Ringkasan Eksekutif** (01_RINGKASAN_EKSEKUTIF.md)
    - Overview singkat sistem
-   - Teknologi utama (Laravel 13, React 19, MySQL, Redis)
+   - Teknologi utama (Laravel 13, React 19, MySQL, File Cache)
    - Fitur-fitur utama (5 fitur)
-   - Pengguna sistem (3 role)
+   - Pengguna sistem (2 role)
    - Statistik sistem
    - Metrik performa
    - **Waktu baca**: 2 menit
@@ -30,7 +30,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 ### 2. **Deskripsi Sistem** (02_DESKRIPSI_SISTEM.md)
    - Nama & definisi sistem
    - Tujuan pengembangan (5 tujuan utama)
-   - Pengguna sistem (Admin, Staff, Customer)
+   - Pengguna sistem (Staff, Customer)
    - Latar belakang masalah
    - Scope sistem (fitur included & excluded)
    - Persyaratan fungsional & non-fungsional
@@ -58,7 +58,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 
 ### 5. **Database Design** (05_DATABASE_DESIGN.md)
    - ER Diagram (PlantUML)
-   - Spesifikasi 10 tabel utama
+   - Spesifikasi 11 tabel utama
    - Relasi & constraint
    - Enum values
    - Indexing strategy
@@ -136,7 +136,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 | # | File | Deskripsi | Tipe |
 |---|------|-----------|------|
 | 1 | `01_arsitektur_sistem.puml` | Component diagram arsitektur | Component |
-| 2 | `02_use_case_diagram.puml` | 18 use case untuk 3 role | Use Case |
+| 2 | `02_use_case_diagram.puml` | 18 use case untuk 2 role | Use Case |
 | 3 | `03_activity_tiket.puml` | Alur pembuatan & penanganan tiket | Activity |
 | 4 | `04_activity_saw.puml` | Alur perhitungan SAW score | Activity |
 | 5 | `05_flowchart_login.puml` | Proses login & autentikasi | Flowchart |
@@ -144,7 +144,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 | 7 | `07_er_diagram.puml` | Entity Relationship Diagram (10 tabel) | ER |
 | 8 | `08_sequence_tiket.puml` | Alur sequence buat tiket | Sequence |
 | 9 | `09_class_diagram.puml` | Model, Controller, Service, Policy | Class |
-| 10 | `10_deployment_diagram.puml` | Docker containers & deployment | Deployment |
+| 10 | `10_deployment_diagram.puml` | Deployment architecture | Deployment |
 
 ---
 
@@ -192,7 +192,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 ### Deskripsi Sistem
 - ✅ Nama & definisi
 - ✅ Tujuan pengembangan (5 tujuan)
-- ✅ Pengguna sistem (Admin, Staff, Customer)
+- ✅ Pengguna sistem (Staff, Customer)
 - ✅ Latar belakang masalah
 - ✅ Scope sistem (included & excluded)
 - ✅ Persyaratan fungsional (5 RF)
@@ -219,7 +219,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 
 ### Database Design
 - ✅ ER Diagram (PlantUML)
-- ✅ Spesifikasi 10 tabel
+- ✅ Spesifikasi 11 tabel
 - ✅ Relasi & constraint
 - ✅ Enum values
 - ✅ Indexing strategy

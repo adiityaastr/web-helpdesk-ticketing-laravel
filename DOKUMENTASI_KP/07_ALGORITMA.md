@@ -221,7 +221,7 @@ Sistem menggunakan **dual authentication**:
 3. Query user by email
 4. Verify password dengan bcrypt
 5. Generate session token
-6. Store session di Redis
+6. Store session di file
 7. Generate API token (Sanctum)
 8. Create auth cookie
 9. Log activity
@@ -255,7 +255,7 @@ FUNCTION login(email, password):
     
     // 5. Generate session
     sessionToken = generateToken()
-    Redis.set("session_" + sessionToken, user.id, TTL=120min)
+    FileSession.set("session_" + sessionToken, user.id, TTL=120min)
     
     // 6. Generate API token
     apiToken = user.createToken("api-token")

@@ -13,7 +13,6 @@
 - ✅ Expert di Laravel 13
 - ✅ Mahir Inertia.js (server-side rendering)
 - ✅ Mahir Sanctum (token authentication)
-- ✅ Mahir Queue system (Redis)
 - ✅ Mahir Event & Listener
 - ✅ Mahir Policy & Authorization
 
@@ -27,9 +26,6 @@ return inertia('Tickets/Index', [
 
 // Sanctum - Token authentication
 $token = $user->createToken('api-token')->plainTextToken;
-
-// Queue - Async processing
-SendNotificationJob::dispatch($user, $data);
 
 // Event & Listener - Event-driven architecture
 event(new TicketCreated($ticket));
@@ -102,31 +98,33 @@ FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 
 ---
 
-### 4. Docker & Containerization
+### 4. Local Development Environment
 
 **Sebelum KP**:
-- Familiar dengan Docker basics
-- Belum tahu docker-compose
-- Belum tahu multi-container setup
+- Familiar dengan XAMPP basics
+- Belum tahu Laragon
+- Belum tahu environment configuration
 
 **Setelah KP**:
-- ✅ Expert di Docker
-- ✅ Mahir docker-compose (8 services)
-- ✅ Mahir volume management
-- ✅ Mahir network configuration
-- ✅ Mahir health checks
+- ✅ Expert di XAMPP/Laragon setup
+- ✅ Mahir environment configuration (.env)
+- ✅ Mahir Apache virtual hosts
+- ✅ Mahir MySQL management
+- ✅ Mahir PHP extensions
 
 **Pembelajaran Kunci**:
-```yaml
-# docker-compose.yml - Multi-container orchestration
-services:
-  app:
-    build: .
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "php-fpm-healthcheck"]
+```env
+# .env - Environment configuration
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=helpdesk_db
+DB_USERNAME=root
+DB_PASSWORD=
+
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
 ```
 
 ---
@@ -253,9 +251,8 @@ public function test_customer_can_create_ticket()
 **Pembelajaran**:
 - ✅ Database indexing strategy
 - ✅ Query optimization
-- ✅ Caching strategy (Redis)
-- ✅ Load balancing
-- ✅ Horizontal scaling
+- ✅ Caching strategy (file-based)
+- ✅ Performance monitoring
 
 **Insight**:
 > "Scalability bukan afterthought. Harus dipikirkan dari awal design. 
@@ -311,16 +308,15 @@ public function test_customer_can_create_ticket()
 ### 5. DevOps & Deployment
 
 **Pembelajaran**:
-- ✅ Docker containerization
-- ✅ Docker Compose orchestration
+- ✅ Local development environment (XAMPP/Laragon)
 - ✅ Environment configuration
 - ✅ CI/CD pipeline
-- ✅ Zero-downtime deployment
+- ✅ Server deployment
 
 **Insight**:
-> "Docker membuat deployment lebih konsisten. Development, staging, 
-> production punya environment yang sama. Mengurangi 'works on my machine' 
-> problem."
+> "XAMPP/Laragon membuat setup development sangat mudah. Environment 
+> configuration yang baik memastikan aplikasi berjalan konsisten 
+> di berbagai environment."
 
 ---
 
@@ -332,14 +328,14 @@ public function test_customer_can_create_ticket()
 - ✅ Laravel 13 fundamentals
 - ✅ React 19 + Inertia.js
 - ✅ Database design & optimization
-- ✅ Docker & containerization
+- ✅ Local development environment (XAMPP/Laragon)
 - ✅ SAW algorithm implementation
 - ✅ Testing & debugging
 
 **Phase 2 (Next 3-6 bulan)**
 - 📚 Advanced Laravel (Telescope, Horizon, Dusk)
 - 📚 Advanced React (Redux, Context API optimization)
-- 📚 Kubernetes & orchestration
+- 📚 Docker & containerization
 - 📚 CI/CD pipeline (GitHub Actions, GitLab CI)
 - 📚 Microservices architecture
 - 📚 GraphQL API development
@@ -385,7 +381,7 @@ public function test_customer_can_create_ticket()
 | Laravel | Intermediate | Expert | +40% |
 | React | Intermediate | Expert | +40% |
 | Database | Beginner | Intermediate | +50% |
-| Docker | Beginner | Intermediate | +50% |
+| Local Dev Env | Beginner | Intermediate | +50% |
 | Testing | Beginner | Intermediate | +50% |
 | Algorithm | Beginner | Intermediate | +50% |
 | DevOps | Beginner | Beginner+ | +20% |

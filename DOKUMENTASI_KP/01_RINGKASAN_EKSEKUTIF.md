@@ -14,7 +14,7 @@
 
 ## 🎯 Deskripsi Singkat
 
-Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 yang dirancang untuk mengelola tiket bantuan teknis secara terpusat. Sistem ini memungkinkan pelanggan membuat tiket, staff mengelola dan menyelesaikan tiket, serta admin mengawasi keseluruhan operasional. Fitur unggulan adalah **SAW (Simple Additive Weighting)** untuk prioritas otomatis berdasarkan multi-kriteria.
+Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 yang dirancang untuk mengelola tiket bantuan teknis secara terpusat. Sistem ini memungkinkan pelanggan membuat tiket dan staff mengelola, menyelesaikan tiket, serta mengawasi keseluruhan operasional. Fitur unggulan adalah **SAW (Simple Additive Weighting)** untuk prioritas otomatis berdasarkan multi-kriteria.
 
 ---
 
@@ -63,7 +63,7 @@ Helpdesk Ticketing System adalah aplikasi web berbasis Laravel 13 dan React 19 y
    - Database storage untuk history
    - Badge unread di UI
 
-### 4. **Dashboard Admin**
+### 4. **Dashboard Staff**
    - Statistik tiket (total, open, in progress, resolved, closed)
    - Chart distribusi status & prioritas
    - Daftar tiket terbaru

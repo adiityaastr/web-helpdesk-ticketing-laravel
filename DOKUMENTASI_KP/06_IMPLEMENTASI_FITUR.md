@@ -25,7 +25,7 @@ Generate UUID & hitung SAW score
     ↓
 Dispatch event & send notification
     ↓
-Admin/Staff melihat tiket
+Staff melihat tiket
     ↓
 Assign ke staff (optional)
     ↓
@@ -226,7 +226,7 @@ public function store(StoreTicketRequest $request)
 ```
 Ticket dibuat/diupdate
     ↓
-Check Redis cache
+Check file cache
     ├─ Cache hit → Return cached score
     └─ Cache miss → Calculate score
         ↓
@@ -236,7 +236,7 @@ Check Redis cache
         ↓
     Hitung weighted sum
         ↓
-    Cache score ke Redis (60 detik)
+    Cache score ke file (60 detik)
         ↓
     Return score
 ```
@@ -401,49 +401,21 @@ class SendTicketCreatedNotification
 {
     public function handle(TicketCreated $event)
     {
-        // Get admin users
-        $admins = User::role('admin')->get();
+        // Get staff users
+        $staffUsers = User::role('staff')->get();
         
-        // Dispatch notification job
-        foreach ($admins as $admin) {
-            SendNotificationJob::dispatch($admin, [
+        // Create notification directly (sync)
+        foreach ($staffUsers as $staff) {
+            $staff->notifications()->create([
                 'type' => 'ticket_created',
-                'ticket_id' => $event->ticket->id,
-                'title' => 'New Ticket Created',
-                'message' => "New ticket: {$event->ticket->title}",
-                'url' => route('tickets.show', $event->ticket),
+                'data' => [
+                    'ticket_id' => $event->ticket->id,
+                    'title' => 'New Ticket Created',
+                    'message' => "New ticket: {$event->ticket->title}",
+                    'url' => route('tickets.show', $event->ticket),
+                ],
             ]);
         }
-    }
-}
-```
-
-#### **Queue Job**
-
-```php
-// app/Jobs/SendNotificationJob.php
-class SendNotificationJob implements ShouldQueue
-{
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    
-    public function __construct(
-        public User $user,
-        public array $data
-    ) {}
-    
-    public function handle()
-    {
-        // 1. Create notification record
-        $notification = $this->user->notifications()->create([
-            'type' => $this->data['type'],
-            'data' => $this->data,
-        ]);
-        
-        // 2. Broadcast notification (optional)
-        broadcast(new NotificationBroadcast($this->user, $notification));
-        
-        // 3. Send email (optional)
-        Mail::to($this->user)->queue(new NotificationMail($notification));
     }
 }
 ```

@@ -15,7 +15,7 @@ Dokumentasi lengkap untuk sistem Helpdesk Ticketing yang dikembangkan selama per
 ### 2. **[Deskripsi Sistem](02_DESKRIPSI_SISTEM.md)**
    - Nama dan definisi sistem
    - Tujuan pengembangan
-   - Pengguna sistem (3 role)
+   - Pengguna sistem (2 role)
    - Latar belakang masalah
    - Scope sistem
 
@@ -34,7 +34,7 @@ Dokumentasi lengkap untuk sistem Helpdesk Ticketing yang dikembangkan selama per
 
 ### 5. **[Database Design](05_DATABASE_DESIGN.md)**
    - ER Diagram (PlantUML)
-   - Spesifikasi 8 tabel utama
+   - Spesifikasi 11 tabel utama
    - Relasi dan constraint
    - Enum values
 
@@ -99,7 +99,7 @@ Semua diagram tersimpan di folder `diagrams/`:
 | `07_er_diagram.puml` | Entity Relationship Diagram |
 | `08_sequence_tiket.puml` | Sequence diagram tiket |
 | `09_class_diagram.puml` | Class diagram (Model, Controller, Service) |
-| `10_deployment_diagram.puml` | Deployment diagram (Docker) |
+| `10_deployment_diagram.puml` | Deployment diagram |
 
 ---
 

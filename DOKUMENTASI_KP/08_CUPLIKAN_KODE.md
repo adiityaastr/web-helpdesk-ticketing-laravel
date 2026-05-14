@@ -262,60 +262,40 @@ class TicketController extends Controller
 
 ---
 
-### Fungsi 3: Send Notification Job
+### Fungsi 3: Send Notification (Synchronous)
 
-**File**: `app/Jobs/SendNotificationJob.php`
+**File**: `app/Listeners/SendTicketCreatedNotification.php`
 
 ```php
 <?php
 
-namespace App\Jobs;
+namespace App\Listeners;
 
+use App\Events\TicketCreated;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 
-class SendNotificationJob implements ShouldQueue
+class SendTicketCreatedNotification
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public function __construct(
-        public User $user,
-        public array $data
-    ) {
-        $this->onQueue('notifications');
-    }
-
     /**
-     * Execute the job
+     * Handle the event - send notification synchronously
      */
-    public function handle(): void
+    public function handle(TicketCreated $event): void
     {
-        // Create notification record
-        $notification = $this->user->notifications()->create([
-            'type' => $this->data['type'],
-            'data' => $this->data,
-        ]);
+        // Get all staff users
+        $staffUsers = User::role('staff')->get();
 
-        // Broadcast notification (optional)
-        // broadcast(new NotificationBroadcast($this->user, $notification));
-
-        // Send email (optional)
-        // Mail::to($this->user)->queue(new NotificationMail($notification));
-    }
-
-    /**
-     * Handle job failure
-     */
-    public function failed(\Throwable $exception): void
-    {
-        \Log::error('SendNotificationJob failed', [
-            'user_id' => $this->user->id,
-            'error' => $exception->getMessage(),
-        ]);
+        // Create notification for each staff
+        foreach ($staffUsers as $staff) {
+            $staff->notifications()->create([
+                'type' => 'ticket_created',
+                'data' => [
+                    'ticket_id' => $event->ticket->id,
+                    'title' => 'New Ticket Created',
+                    'message' => "New ticket: {$event->ticket->title}",
+                    'url' => route('tickets.show', $event->ticket),
+                ],
+            ]);
+        }
     }
 }
 ```
@@ -388,8 +368,8 @@ class TicketPolicy
      */
     public function view(User $user, Ticket $ticket): bool
     {
-        // Admin & staff can view all
-        if ($user->hasRole(['admin', 'staff'])) {
+        // Staff can view all
+        if ($user->hasRole('staff')) {
             return true;
         }
 
@@ -402,7 +382,7 @@ class TicketPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['customer', 'staff', 'admin']);
+        return $user->hasRole(['customer', 'staff']);
     }
 
     /**
@@ -410,8 +390,8 @@ class TicketPolicy
      */
     public function update(User $user, Ticket $ticket): bool
     {
-        // Admin & staff can update all
-        if ($user->hasRole(['admin', 'staff'])) {
+        // Staff can update all
+        if ($user->hasRole('staff')) {
             return true;
         }
 
@@ -425,8 +405,8 @@ class TicketPolicy
      */
     public function delete(User $user, Ticket $ticket): bool
     {
-        // Admin can delete all
-        if ($user->hasRole('admin')) {
+        // Staff can delete all
+        if ($user->hasRole('staff')) {
             return true;
         }
 
@@ -440,8 +420,8 @@ class TicketPolicy
      */
     public function comment(User $user, Ticket $ticket): bool
     {
-        // Admin & staff can comment all
-        if ($user->hasRole(['admin', 'staff'])) {
+        // Staff can comment all
+        if ($user->hasRole('staff')) {
             return true;
         }
 
@@ -463,7 +443,6 @@ class TicketPolicy
 namespace App\Listeners;
 
 use App\Events\TicketCreated;
-use App\Jobs\SendNotificationJob;
 use App\Models\User;
 
 class SendTicketCreatedNotification
@@ -473,17 +452,19 @@ class SendTicketCreatedNotification
      */
     public function handle(TicketCreated $event): void
     {
-        // Get all admin users
-        $admins = User::role('admin')->get();
+        // Get all staff users
+        $staffUsers = User::role('staff')->get();
 
-        // Send notification to each admin
-        foreach ($admins as $admin) {
-            SendNotificationJob::dispatch($admin, [
+        // Send notification to each staff (sync)
+        foreach ($staffUsers as $staff) {
+            $staff->notifications()->create([
                 'type' => 'ticket_created',
-                'ticket_id' => $event->ticket->id,
-                'title' => 'New Ticket Created',
-                'message' => "New ticket: {$event->ticket->title}",
-                'url' => route('tickets.show', $event->ticket),
+                'data' => [
+                    'ticket_id' => $event->ticket->id,
+                    'title' => 'New Ticket Created',
+                    'message' => "New ticket: {$event->ticket->title}",
+                    'url' => route('tickets.show', $event->ticket),
+                ],
             ]);
         }
     }
@@ -685,7 +666,7 @@ Cuplikan kode menunjukkan implementasi production-ready dari:
 
 1. **SAW Service**: Algoritma multi-kriteria dengan caching
 2. **Ticket Controller**: Create & update dengan event dispatching
-3. **Notification Job**: Async processing via queue
+3. **Notification Listener**: Synchronous notification processing
 4. **Status Validation**: State machine pattern
 5. **Permission Policy**: Fine-grained authorization
 6. **Event Listener**: Event-driven architecture

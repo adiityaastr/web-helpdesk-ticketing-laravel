@@ -30,13 +30,10 @@
 **Feedback dari Stakeholder**:
 
 ```
-Admin:
+Staff IT:
 "Sistem ini sangat membantu. Sekarang saya bisa lihat semua tiket 
-dalam satu dashboard. Prioritas otomatis menghemat waktu saya."
-Rating: 5/5 ⭐⭐⭐⭐⭐
-
-Staff:
-"Interface user-friendly. Notifikasi real-time membantu saya tidak 
+dalam satu dashboard. Prioritas otomatis menghemat waktu saya.
+Interface user-friendly. Notifikasi real-time membantu saya tidak 
 ketinggalan tiket. Komentar internal sangat berguna."
 Rating: 4.5/5 ⭐⭐⭐⭐
 
@@ -82,15 +79,15 @@ Rating: 4/5 ⭐⭐⭐⭐
 
 ### 3. Real-time Notification
 - Event-driven architecture
-- Queue worker untuk async
+- Synchronous processing
 - Database storage untuk history
 - Badge unread di UI
 
-### 4. Scalable Architecture
-- Docker containerized
-- Horizontal scaling ready
-- Database indexing optimal
-- Caching strategy
+### 4. Simple Architecture
+- Monolithic application
+- Easy to deploy (XAMPP/Laragon)
+- File-based cache & session
+- No external dependencies needed
 
 ### 5. Secure Authentication
 - Sanctum token-based auth
@@ -99,8 +96,8 @@ Rating: 4/5 ⭐⭐⭐⭐
 - Password hashing (bcrypt)
 
 ### 6. Performance Optimized
-- OPcache enabled (256MB)
-- Redis caching
+- OPcache enabled
+- File-based caching
 - Database indexes
 - Eager loading
 - Query optimization

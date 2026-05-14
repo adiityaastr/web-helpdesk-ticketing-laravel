@@ -277,7 +277,7 @@ Local Machine (XAMPP/Laragon)
 ### Production
 ```
 Server
-├── Apache / Nginx (port 80/443)
+├── Apache (port 80/443)
 ├── PHP 8.3
 ├── MySQL (port 3306)
 ├── File-based cache & session
@@ -310,9 +310,9 @@ Server
 
 ### Horizontal Scaling
 - **Stateless PHP**: Bisa scale multiple instances
-- **File Session**: Bisa migrasi ke Redis jika perlu scale
+- **File Session**: Bisa migrasi ke database session jika perlu scale
 - **Database**: Master-slave replication (optional)
-- **Load Balancer**: Apache/Nginx upstream (optional)
+- **Load Balancer**: Apache upstream (optional)
 
 ### Vertical Scaling
 - **PHP Memory**: 512MB per instance

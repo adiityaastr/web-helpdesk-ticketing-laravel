@@ -270,7 +270,7 @@ Ticket dibuat
   │  │      │  ├─ Ya → Assign otomatis
   │  │      │  └─ Tidak → Tetap unassigned
   │  └─ Tidak → Tetap unassigned
-  └─ Admin assign manual
+  └─ Staff assign manual
      ├─ Pilih staff
      └─ Assign
 ```
@@ -285,7 +285,7 @@ Ticket dibuat
   │  │      │  ├─ Ya → Set priority = high/critical
   │  │      │  └─ Tidak → Set priority = low/medium
   │  └─ Tidak → Set priority = default (medium)
-  └─ Admin set manual
+  └─ Staff set manual
      ├─ Pilih priority
      └─ Set
 ```
