@@ -112,7 +112,7 @@ Lihat file: `diagrams/01_arsitektur_sistem.puml`
 
 #### Laravel 13 Framework
 - **Routing**: Web routes (Inertia) + API routes (Sanctum)
-- **Controllers**: 8 controller untuk berbagai fitur
+- **Controllers**: 12 controller untuk berbagai fitur
 - **Models**: 8 model dengan relationship
 - **Middleware**: Auth, role, permission checking
 - **Policies**: Authorization logic per model
@@ -283,26 +283,6 @@ Server
 ├── File-based cache & session
 └── Monitoring (optional)
 ```
-
----
-
-## 🔐 Security Architecture
-
-### Authentication
-- **Method**: Session-based + Token-based (Sanctum)
-- **Password**: Bcrypt hashing
-- **Session**: File storage, 120 menit lifetime
-
-### Authorization
-- **Method**: Role-Based Access Control (RBAC)
-- **Roles**: staff, customer
-- **Policies**: TicketPolicy untuk fine-grained control
-
-### Data Protection
-- **HTTPS**: SSL/TLS (production)
-- **CSRF**: Token validation
-- **SQL Injection**: Prepared statements
-- **XSS**: HTML escaping
 
 ---
 

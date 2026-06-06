@@ -63,7 +63,6 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 - ✅ Kelola knowledge base
 - ✅ Konfigurasi SAW (bobot kriteria)
 - ✅ Lihat dashboard & analytics
-- ✅ Kelola template respons
 - ✅ Update status tiket
 - ✅ Tambah komentar publik & internal
 - ✅ Upload lampiran
@@ -75,7 +74,6 @@ Sistem manajemen tiket bantuan teknis berbasis web yang dirancang untuk mengelol
 - Audit trail
 - Notifikasi tiket baru
 - Komentar internal (tidak terlihat customer)
-- Template respons cepat
 - Lampiran & file management
 
 ---

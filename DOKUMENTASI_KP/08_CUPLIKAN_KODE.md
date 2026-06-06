@@ -11,146 +11,156 @@
 
 namespace App\Services;
 
-use App\Models\Ticket;
 use App\Models\SawConfiguration;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\Cache;
 
 class SawService
 {
-    /**
-     * Calculate SAW score for a ticket
-     */
-    public function calculateScore(Ticket $ticket): float
+    private array $criteria = [];
+    private array $weights = [];
+    private array $types = [];
+
+    public function __construct()
     {
-        // Check cache first
-        $cacheKey = "saw_score_{$ticket->id}";
-        if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
-        }
+        $configs = SawConfiguration::query()->orderBy('sort_order')->get();
 
-        // Get SAW configurations
-        $configs = SawConfiguration::orderBy('sort_order')->get();
-        $weights = $configs->pluck('weight', 'code')->toArray();
-
-        // Extract criteria values
-        $c1 = $this->getCriteriaC1($ticket); // Priority
-        $c2 = $this->getCriteriaC2($ticket); // SLA Urgency
-        $c3 = $this->getCriteriaC3($ticket); // Wait Time
-        $c4 = $this->getCriteriaC4($ticket); // Customer Activity
-        $c5 = $this->getCriteriaC5($ticket); // Complexity
-
-        // Normalize values
-        $r1 = $this->normalize($c1, 4, 'benefit');
-        $r2 = $this->normalize($c2, 100, 'benefit');
-        $r3 = $this->normalize($c3, 1440, 'cost');
-        $r4 = $this->normalize($c4, 10, 'benefit');
-        $r5 = $this->normalize($c5, 5, 'benefit');
-
-        // Calculate weighted sum
-        $score = (
-            ($weights['C1'] ?? 0.30) * $r1 +
-            ($weights['C2'] ?? 0.25) * $r2 +
-            ($weights['C3'] ?? 0.20) * $r3 +
-            ($weights['C4'] ?? 0.15) * $r4 +
-            ($weights['C5'] ?? 0.10) * $r5
-        );
-
-        // Cache result for 60 seconds
-        Cache::put($cacheKey, $score, now()->addSeconds(60));
-
-        return $score;
-    }
-
-    /**
-     * Normalize value based on type
-     */
-    private function normalize($value, $max, $type): float
-    {
-        if ($type === 'benefit') {
-            return $max > 0 ? $value / $max : 0;
-        } else { // cost
-            return $value > 0 ? $max / $value : 0;
+        foreach ($configs as $config) {
+            $this->criteria[] = $config->code;
+            $this->weights[$config->code] = (float) $config->weight;
+            $this->types[$config->code] = $config->type;
         }
     }
 
-    /**
-     * C1: Priority (1-4)
-     */
-    private function getCriteriaC1(Ticket $ticket): int
+    public function calculateScores(): array
     {
-        return match($ticket->priority) {
-            'low' => 1,
-            'medium' => 2,
-            'high' => 3,
-            'critical' => 4,
-            default => 2,
+        $tickets = Ticket::query()
+            ->with(['category', 'reporter'])
+            ->get();
+
+        if ($tickets->isEmpty()) {
+            return [];
+        }
+
+        $userTicketCounts = Ticket::query()
+            ->selectRaw('user_id, COUNT(*) as total')
+            ->groupBy('user_id')
+            ->pluck('total', 'user_id');
+
+        $matrix = $this->buildDecisionMatrix($tickets, $userTicketCounts);
+        $normalized = $this->normalize($matrix);
+        $scores = $this->weightedSum($normalized);
+
+        arsort($scores);
+
+        return $scores;
+    }
+
+    private function buildDecisionMatrix($tickets, $userTicketCounts): array
+    {
+        $matrix = [];
+        foreach ($tickets as $ticket) {
+            $row = [];
+            foreach ($this->criteria as $code) {
+                $row[$code] = $this->getCriterionValue($ticket, $code, $userTicketCounts);
+            }
+            $matrix[$ticket->id] = $row;
+        }
+        return $matrix;
+    }
+
+    private function getCriterionValue(Ticket $ticket, string $code, $userTicketCounts): float
+    {
+        return match ($code) {
+            'C1' => $this->priorityScore($ticket->priority),
+            'C2' => $this->slaUrgency($ticket),
+            'C3' => $this->waitingTime($ticket),
+            'C4' => $this->customerActivity($ticket, $userTicketCounts),
+            'C5' => $this->complexity($ticket),
+            default => 0,
         };
     }
 
-    /**
-     * C2: SLA Urgency (0-100)
-     */
-    private function getCriteriaC2(Ticket $ticket): int
+    private function priorityScore(string $priority): float
     {
-        if (!$ticket->sla_deadline) {
-            return 50;
-        }
-
-        $minutesLeft = $ticket->sla_deadline->diffInMinutes(now());
-        $urgency = 100 - ($minutesLeft / 1440 * 100);
-
-        return max(0, min(100, (int)$urgency));
+        return match ($priority) {
+            'critical' => 4.0,
+            'high' => 3.0,
+            'medium' => 2.0,
+            'low' => 1.0,
+            default => 1.0,
+        };
     }
 
-    /**
-     * C3: Wait Time (minutes)
-     */
-    private function getCriteriaC3(Ticket $ticket): int
+    private function slaUrgency(Ticket $ticket): float
     {
-        return $ticket->created_at->diffInMinutes(now());
+        if (! $ticket->sla_deadline) {
+            return 0;
+        }
+        $hoursRemaining = now()->diffInHours($ticket->sla_deadline, false);
+        if ($hoursRemaining <= 0) {
+            return 10;
+        }
+        return 1 / ($hoursRemaining + 1);
     }
 
-    /**
-     * C4: Customer Activity (0-10)
-     */
-    private function getCriteriaC4(Ticket $ticket): int
+    private function waitingTime(Ticket $ticket): float
     {
-        return min(10, $ticket->comments()->count());
+        return $ticket->created_at->diffInHours(now());
     }
 
-    /**
-     * C5: Complexity (1-5)
-     */
-    private function getCriteriaC5(Ticket $ticket): int
+    private function customerActivity(Ticket $ticket, $userTicketCounts): float
     {
-        $complexity = 1;
-
-        // Length of description
-        if (strlen($ticket->description) > 500) {
-            $complexity++;
-        }
-
-        // Keywords
-        if (preg_match('/urgent|critical|asap|emergency/i', $ticket->description)) {
-            $complexity++;
-        }
-
-        // Attachments
-        if ($ticket->comments()->whereNotNull('attachments')->count() > 0) {
-            $complexity++;
-        }
-
-        return min(5, $complexity);
+        return (float) ($userTicketCounts[$ticket->user_id] ?? 0);
     }
 
-    /**
-     * Recalculate all tickets
-     */
-    public function recalculateAll(): void
+    private function complexity(Ticket $ticket): float
     {
-        Ticket::where('status', '!=', 'closed')->each(function ($ticket) {
-            $score = $this->calculateScore($ticket);
-            $ticket->update(['saw_score' => $score]);
+        return (float) mb_strlen($ticket->description ?? '');
+    }
+
+    private function normalize(array $matrix): array
+    {
+        $normalized = [];
+        foreach ($this->criteria as $code) {
+            $values = array_column($matrix, $code);
+            $max = max($values) ?: 1;
+            $min = min($values) ?: 0;
+            foreach ($matrix as $id => $row) {
+                if ($this->types[$code] === 'benefit') {
+                    $normalized[$id][$code] = $max > 0 ? $row[$code] / $max : 0;
+                } else {
+                    $normalized[$id][$code] = $row[$code] > 0 ? $min / $row[$code] : 0;
+                }
+            }
+        }
+        return $normalized;
+    }
+
+    private function weightedSum(array $normalized): array
+    {
+        $scores = [];
+        foreach ($normalized as $id => $row) {
+            $score = 0;
+            foreach ($this->criteria as $code) {
+                $score += $row[$code] * $this->weights[$code];
+            }
+            $scores[$id] = round($score, 4);
+        }
+        return $scores;
+    }
+
+    public function getScores(): array
+    {
+        return Cache::remember(CacheManager::ADMIN_SAW_SCORES, CacheManager::TTL_SHORT, function () {
+            try {
+                return $this->calculateScores();
+            } catch (\Exception $e) {
+                AuditLogger::error('SAW calculation failed', $e, [
+                    'ticket_count' => Ticket::query()->count(),
+                ]);
+                return [];
+            }
         });
     }
 }
@@ -158,144 +168,170 @@ class SawService
 
 ---
 
-### Fungsi 2: Create Ticket Controller
+### Fungsi 2: Ticket Service (Create & Manage)
 
-**File**: `app/Http/Controllers/TicketController.php`
+**File**: `app/Services/TicketService.php`
 
 ```php
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Services;
 
+use App\Exceptions\TicketException;
 use App\Models\Ticket;
-use App\Http\Requests\StoreTicketRequest;
-use App\Services\SawService;
-use App\Events\TicketCreated;
-use App\Models\ActivityLog;
-use Illuminate\Support\Str;
+use App\Models\User;
+use App\Services\Traits\TrackTicketActivity;
+use Illuminate\Http\Request;
 
-class TicketController extends Controller
+class TicketService
 {
-    public function __construct(private SawService $sawService) {}
+    use TrackTicketActivity;
 
-    /**
-     * Store a newly created ticket
-     */
-    public function store(StoreTicketRequest $request)
+    public function createTicket(Request $request, User $user): Ticket
     {
-        // Create ticket
-        $ticket = Ticket::create([
-            'uuid' => Str::uuid(),
-            'user_id' => auth()->id(),
-            'category_id' => $request->category_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'priority' => $request->priority ?? 'medium',
-            'status' => 'open',
-        ]);
-
-        // Handle attachments
+        $attachmentPaths = [];
         if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('tickets/' . $ticket->id, 'public');
-                $ticket->attachments()->create(['path' => $path]);
+            foreach ($request->file('attachments') as $attachment) {
+                $attachmentPaths[] = $attachment->store('tickets/attachments', 'public');
             }
         }
 
-        // Calculate SAW score
-        $sawScore = $this->sawService->calculateScore($ticket);
-        $ticket->update(['saw_score' => $sawScore]);
-
-        // Dispatch event
-        event(new TicketCreated($ticket));
-
-        // Log activity
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'ticket_id' => $ticket->id,
-            'action' => 'create',
-            'description' => 'Created ticket: ' . $ticket->title,
+        $ticket = Ticket::query()->create([
+            'user_id' => $user->id,
+            'category_id' => $request->integer('category_id'),
+            'title' => $request->string('title'),
+            'description' => $request->string('description'),
+            'priority' => $request->input('priority'),
+            'status' => 'open',
         ]);
 
-        return redirect()->route('tickets.show', $ticket)
-            ->with('success', 'Ticket created successfully');
+        $ticket->comments()->create([
+            'user_id' => $user->id,
+            'message' => 'Tiket berhasil dibuat.',
+            'is_internal' => false,
+            'attachments' => $attachmentPaths,
+        ]);
+
+        $this->logActivity($ticket, $user, 'created', 'Tiket dibuat oleh pelapor.');
+        $this->notifyRelatedUsers($ticket, 'created');
+        $this->invalidateTicketCaches($ticket, $user->id);
+
+        return $ticket;
     }
 
-    /**
-     * Update ticket status
-     */
-    public function updateStatus(Ticket $ticket, Request $request)
+    public function cancelTicket(Ticket $ticket, User $user): Ticket
     {
-        $this->authorize('update', $ticket);
-
-        // Validate transition
-        if (!$ticket->canTransitionTo($request->status)) {
-            return back()->with('error', 'Invalid status transition');
-        }
-
-        $oldStatus = $ticket->status;
-
-        // Update status
-        $ticket->update(['status' => $request->status]);
-
-        // Handle status-specific logic
-        if ($request->status === 'resolved') {
-            $ticket->update(['resolved_at' => now()]);
-        } elseif ($request->status === 'closed') {
-            $ticket->update(['resolved_confirmed_at' => now()]);
-        } elseif ($request->status === 'cancelled') {
-            $ticket->update(['cancelled_at' => now()]);
-        }
-
-        // Log activity
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'ticket_id' => $ticket->id,
-            'action' => 'update_status',
-            'description' => "Changed status from {$oldStatus} to {$request->status}",
+        $ticket->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
         ]);
 
-        return back()->with('success', 'Status updated');
+        $this->logActivity($ticket, $user, 'cancelled', 'Tiket dibatalkan oleh pelapor.');
+        $this->notifyRelatedUsers($ticket, 'cancelled');
+        $this->invalidateTicketCaches($ticket, $ticket->user_id);
+
+        return $ticket;
+    }
+
+    public function confirmResolution(Ticket $ticket, User $user): Ticket
+    {
+        if ($ticket->user_id !== $user->id) {
+            throw TicketException::unauthorized();
+        }
+        if ($ticket->status !== 'resolved') {
+            throw TicketException::notResolved();
+        }
+        if ($ticket->resolved_confirmed_at) {
+            throw TicketException::alreadyConfirmed();
+        }
+
+        $ticket->update([
+            'resolved_confirmed_at' => now(),
+            'status' => 'closed',
+        ]);
+
+        $ticket->comments()->create([
+            'user_id' => $user->id,
+            'message' => 'Pelapor mengonfirmasi penyelesaian. Tiket ditutup.',
+            'is_internal' => false,
+        ]);
+
+        $this->logActivity($ticket, $user, 'confirmed', 'Pelapor mengonfirmasi penyelesaian tiket.');
+        $this->notifyRelatedUsers($ticket, 'confirmed');
+        $this->invalidateTicketCaches($ticket);
+
+        return $ticket;
     }
 }
 ```
 
 ---
 
-### Fungsi 3: Send Notification (Synchronous)
+### Fungsi 3: Portal Ticket Controller
 
-**File**: `app/Listeners/SendTicketCreatedNotification.php`
+**File**: `app/Http/Controllers/Portal/TicketController.php`
 
 ```php
 <?php
 
-namespace App\Listeners;
+namespace App\Http\Controllers\Portal;
 
-use App\Events\TicketCreated;
-use App\Models\User;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTicketRequest;
+use App\Http\Resources\TicketResource;
+use App\Models\Category;
+use App\Models\Ticket;
+use App\Services\CacheManager;
+use App\Services\CommentService;
+use App\Services\NotificationService;
+use App\Services\SawService;
+use App\Services\TicketService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Inertia\Inertia;
+use Inertia\Response;
 
-class SendTicketCreatedNotification
+class TicketController extends Controller
 {
-    /**
-     * Handle the event - send notification synchronously
-     */
-    public function handle(TicketCreated $event): void
-    {
-        // Get all staff users
-        $staffUsers = User::role('staff')->get();
+    public function __construct(
+        private TicketService $ticketService,
+        private CommentService $commentService,
+        private NotificationService $notificationService
+    ) {}
 
-        // Create notification for each staff
-        foreach ($staffUsers as $staff) {
-            $staff->notifications()->create([
-                'type' => 'ticket_created',
-                'data' => [
-                    'ticket_id' => $event->ticket->id,
-                    'title' => 'New Ticket Created',
-                    'message' => "New ticket: {$event->ticket->title}",
-                    'url' => route('tickets.show', $event->ticket),
-                ],
-            ]);
-        }
+    public function index(Request $request): Response
+    {
+        $tickets = $this->ticketService->getUserTickets(
+            $request->user(),
+            $request->only(['status', 'priority', 'search']),
+            10
+        );
+
+        TicketResource::setSharedScores(app(SawService::class)->getScores());
+
+        return Inertia::render('Portal/Tickets/Index', [
+            'tickets' => TicketResource::collection($tickets),
+            'filters' => $request->only(['status', 'priority', 'search']),
+        ]);
+    }
+
+    public function store(StoreTicketRequest $request): RedirectResponse
+    {
+        $ticket = $this->ticketService->createTicket($request, $request->user());
+        $this->notificationService->notifyTicketUpdate($ticket, 'created', null, true);
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket berhasil dibuat.');
+    }
+
+    public function show(Ticket $ticket): Response
+    {
+        $this->authorize('view', $ticket);
+        $detail = $this->ticketService->getTicketWithDetails($ticket, false);
+
+        return Inertia::render('Portal/Tickets/Show', [
+            'ticket' => new TicketResource($detail['ticket']),
+            'comments' => $detail['comments'],
+        ]);
     }
 }
 ```
@@ -304,7 +340,7 @@ class SendTicketCreatedNotification
 
 ## 🔐 Logika Penting
 
-### Logika 1: Status Flow Validation
+### Logika 1: Ticket Model (SLA & Status)
 
 **File**: `app/Models/Ticket.php`
 
@@ -313,36 +349,92 @@ class SendTicketCreatedNotification
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Ticket extends Model
 {
-    /**
-     * Valid status transitions
-     */
-    private static array $validTransitions = [
-        'open' => ['in_progress', 'cancelled'],
-        'in_progress' => ['resolved', 'cancelled'],
-        'resolved' => ['closed', 'in_progress'],
-        'closed' => [],
-        'cancelled' => [],
+    use HasFactory;
+
+    protected $fillable = [
+        'uuid', 'user_id', 'category_id', 'title', 'description',
+        'priority', 'status', 'assigned_to', 'sla_deadline',
+        'resolved_at', 'resolved_confirmed_at', 'cancelled_at',
+        'rating', 'rating_comment',
     ];
 
-    /**
-     * Check if status transition is valid
-     */
-    public function canTransitionTo(string $newStatus): bool
+    protected function casts(): array
     {
-        $validTransitions = self::$validTransitions[$this->status] ?? [];
-        return in_array($newStatus, $validTransitions);
+        return [
+            'sla_deadline' => 'datetime',
+            'resolved_at' => 'datetime',
+            'resolved_confirmed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'rating' => 'integer',
+        ];
     }
 
-    /**
-     * Get available transitions
-     */
-    public function getAvailableTransitions(): array
+    protected static function booted(): void
     {
-        return self::$validTransitions[$this->status] ?? [];
+        static::creating(function (Ticket $ticket): void {
+            if (blank($ticket->uuid)) {
+                $ticket->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function publicComments(): HasMany
+    {
+        return $this->hasMany(Comment::class)->where('is_internal', false);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->sla_deadline !== null
+            && ! in_array($this->status, ['resolved', 'closed', 'cancelled'])
+            && now()->isAfter($this->sla_deadline);
+    }
+
+    public function isSlaWarning(): bool
+    {
+        if (! $this->sla_deadline || in_array($this->status, ['resolved', 'closed', 'cancelled'])) {
+            return false;
+        }
+        return now()->diffInHours($this->sla_deadline, false) <= 4
+            && now()->diffInHours($this->sla_deadline, false) > 0;
+    }
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status, ['open', 'in_progress']);
     }
 }
 ```
@@ -358,115 +450,103 @@ class Ticket extends Model
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Ticket;
+use App\Models\User;
 
 class TicketPolicy
 {
-    /**
-     * View ticket
-     */
+    public function viewAny(User $user): bool
+    {
+        return $user->hasAnyRole(['customer', 'staff']);
+    }
+
     public function view(User $user, Ticket $ticket): bool
     {
-        // Staff can view all
-        if ($user->hasRole('staff')) {
+        if ($user->isStaff()) {
             return true;
         }
-
-        // Customer can only view own tickets
-        return $user->id === $ticket->user_id;
+        return $ticket->user_id === $user->id;
     }
 
-    /**
-     * Create ticket
-     */
     public function create(User $user): bool
     {
-        return $user->hasRole(['customer', 'staff']);
+        return $user->hasAnyRole(['customer', 'staff']);
     }
 
-    /**
-     * Update ticket
-     */
     public function update(User $user, Ticket $ticket): bool
     {
-        // Staff can update all
-        if ($user->hasRole('staff')) {
+        if ($user->isStaff()) {
             return true;
         }
-
-        // Customer can only update own active tickets
-        return $user->id === $ticket->user_id && 
-               in_array($ticket->status, ['open', 'in_progress']);
+        return $ticket->user_id === $user->id
+            && in_array($ticket->status, ['open', 'in_progress'], true);
     }
 
-    /**
-     * Delete ticket
-     */
     public function delete(User $user, Ticket $ticket): bool
     {
-        // Staff can delete all
-        if ($user->hasRole('staff')) {
+        if ($user->isStaff()) {
             return true;
         }
-
-        // Customer can only delete own open/cancelled tickets
-        return $user->id === $ticket->user_id && 
-               in_array($ticket->status, ['open', 'cancelled']);
+        return $ticket->user_id === $user->id
+            && in_array($ticket->status, ['open', 'cancelled'], true);
     }
 
-    /**
-     * Add comment
-     */
     public function comment(User $user, Ticket $ticket): bool
     {
-        // Staff can comment all
-        if ($user->hasRole('staff')) {
+        if ($user->isStaff()) {
             return true;
         }
+        return $ticket->user_id === $user->id;
+    }
 
-        // Customer can only comment own tickets
-        return $user->id === $ticket->user_id;
+    public function cancel(User $user, Ticket $ticket): bool
+    {
+        if ($user->isStaff()) {
+            return $ticket->isCancellable();
+        }
+        return $ticket->user_id === $user->id && $ticket->isCancellable();
     }
 }
 ```
 
 ---
 
-### Logika 3: Event Listener
+### Logika 3: Ticket Exception Handling
 
-**File**: `app/Listeners/SendTicketCreatedNotification.php`
+**File**: `app/Exceptions/TicketException.php`
 
 ```php
 <?php
 
-namespace App\Listeners;
+namespace App\Exceptions;
 
-use App\Events\TicketCreated;
-use App\Models\User;
+use Exception;
 
-class SendTicketCreatedNotification
+class TicketException extends Exception
 {
-    /**
-     * Handle the event
-     */
-    public function handle(TicketCreated $event): void
+    public static function unauthorized(): self
     {
-        // Get all staff users
-        $staffUsers = User::role('staff')->get();
+        return new self('Anda tidak memiliki akses untuk melakukan aksi ini.', 403);
+    }
 
-        // Send notification to each staff (sync)
-        foreach ($staffUsers as $staff) {
-            $staff->notifications()->create([
-                'type' => 'ticket_created',
-                'data' => [
-                    'ticket_id' => $event->ticket->id,
-                    'title' => 'New Ticket Created',
-                    'message' => "New ticket: {$event->ticket->title}",
-                    'url' => route('tickets.show', $event->ticket),
-                ],
-            ]);
-        }
+    public static function notResolved(): self
+    {
+        return new self('Tiket belum dalam status resolved.', 400);
+    }
+
+    public static function alreadyConfirmed(): self
+    {
+        return new self('Tiket sudah dikonfirmasi sebelumnya.', 400);
+    }
+
+    public static function cannotRate(): self
+    {
+        return new self('Hanya tiket yang sudah resolved/closed yang dapat diberi rating.', 400);
+    }
+
+    public static function alreadyRated(): self
+    {
+        return new self('Tiket sudah pernah diberi rating.', 400);
     }
 }
 ```
@@ -480,180 +560,86 @@ class SendTicketCreatedNotification
 ```php
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\TicketController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\TicketApiController;
 
-Route::middleware('auth:sanctum')->group(function () {
-    // Get current user
-    Route::get('/user', function (Request $request) {
-        return $request->user();
+Route::prefix('v1')->group(function (): void {
+    Route::middleware('throttle:5,1')->group(function (): void {
+        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/login', [AuthController::class, 'login']);
     });
 
-    // Tickets API
-    Route::apiResource('tickets', TicketApiController::class);
-
-    // Ticket comments
-    Route::post('tickets/{ticket}/comments', [TicketApiController::class, 'addComment']);
-
-    // Ticket rating
-    Route::post('tickets/{ticket}/rate', [TicketApiController::class, 'rate']);
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::middleware('throttle:60,1')->group(function (): void {
+            Route::post('/logout', [AuthController::class, 'logout']);
+            Route::get('/user', [AuthController::class, 'user']);
+            Route::get('/tickets', [TicketController::class, 'index']);
+            Route::post('/tickets', [TicketController::class, 'store']);
+            Route::get('/tickets/{ticket}', [TicketController::class, 'show']);
+            Route::post('/tickets/{ticket}/comments', [TicketController::class, 'comment']);
+        });
+    });
 });
-```
-
-**File**: `app/Http/Controllers/Api/TicketApiController.php`
-
-```php
-<?php
-
-namespace App\Http\Controllers\Api;
-
-use App\Models\Ticket;
-use App\Http\Resources\TicketResource;
-use Illuminate\Http\Request;
-
-class TicketApiController
-{
-    /**
-     * Get all tickets for authenticated user
-     */
-    public function index(Request $request)
-    {
-        $tickets = Ticket::where('user_id', $request->user()->id)
-            ->with('category', 'comments', 'assignedTo')
-            ->paginate(15);
-
-        return TicketResource::collection($tickets);
-    }
-
-    /**
-     * Get single ticket
-     */
-    public function show(Ticket $ticket)
-    {
-        $this->authorize('view', $ticket);
-        return new TicketResource($ticket->load('category', 'comments', 'assignedTo'));
-    }
-
-    /**
-     * Create ticket
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category_id' => 'required|exists:categories,id',
-        ]);
-
-        $ticket = Ticket::create([
-            'user_id' => $request->user()->id,
-            ...$validated,
-        ]);
-
-        return new TicketResource($ticket);
-    }
-}
 ```
 
 ---
 
-## 🧪 PHPUnit Test: Status Transition Validation
+## 🧪 PHPUnit Test: SAW Calculation
 
-**File**: `tests/Unit/TicketStatusTest.php`
+**File**: `tests/Feature/SawServiceTest.php`
 
 ```php
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
+use App\Models\SawConfiguration;
 use App\Models\Ticket;
+use App\Models\User;
+use App\Services\SawService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class TicketStatusTest extends TestCase
+class SawServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_valid_transitions()
+    private SawService $sawService;
+
+    protected function setUp(): void
     {
-        $ticket = Ticket::factory()->create(['status' => 'open']);
-        
-        $this->assertTrue($ticket->canTransitionTo('in_progress'));
-        $this->assertTrue($ticket->canTransitionTo('cancelled'));
-        $this->assertFalse($ticket->canTransitionTo('closed'));
-        $this->assertFalse($ticket->canTransitionTo('resolved'));
+        parent::setUp();
+        $this->sawService = app(SawService::class);
     }
 
-    public function test_invalid_transitions()
+    public function test_saw_calculation_returns_scores(): void
     {
-        $ticket = Ticket::factory()->create(['status' => 'closed']);
-        
-        $this->assertFalse($ticket->canTransitionTo('open'));
-        $this->assertFalse($ticket->canTransitionTo('in_progress'));
-        $this->assertFalse($ticket->canTransitionTo('resolved'));
-        $this->assertFalse($ticket->canTransitionTo('cancelled'));
-    }
+        SawConfiguration::query()->firstOrCreate(
+            ['code' => 'C1'],
+            ['name' => 'Priority', 'type' => 'benefit', 'weight' => 0.25, 'sort_order' => 1]
+        );
+        SawConfiguration::query()->firstOrCreate(
+            ['code' => 'C2'],
+            ['name' => 'SLA Urgency', 'type' => 'benefit', 'weight' => 0.30, 'sort_order' => 2]
+        );
 
-    public function test_resolved_status_transitions()
-    {
-        $ticket = Ticket::factory()->create(['status' => 'resolved']);
-        
-        $this->assertTrue($ticket->canTransitionTo('closed'));
-        $this->assertTrue($ticket->canTransitionTo('in_progress'));
-    }
-}
-```
+        $user = User::factory()->create();
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'priority' => 'critical',
+            'status' => 'open',
+        ]);
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'priority' => 'low',
+            'status' => 'open',
+        ]);
 
-## ⚡ Performance Optimization: Eager Loading
+        $scores = $this->sawService->calculateScores();
 
-**File**: `app/Repositories/TicketRepository.php`
-
-```php
-<?php
-
-namespace App\Repositories;
-
-use App\Models\Ticket;
-use Illuminate\Pagination\LengthAwarePaginator;
-
-class TicketRepository
-{
-    public function getFilteredTickets(array $filters): LengthAwarePaginator
-    {
-        $query = Ticket::query()
-            ->with(['category', 'assignedTo', 'comments' => function ($q) {
-                $q->latest()->limit(3);
-            }])
-            ->withCount('comments');
-
-        if (!empty($filters['status'])) {
-            $query->whereIn('status', $filters['status']);
-        }
-
-        if (!empty($filters['priority'])) {
-            $query->whereIn('priority', $filters['priority']);
-        }
-
-        if (!empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
-        }
-
-        if (!empty($filters['assigned_to'])) {
-            $query->where('assigned_to', $filters['assigned_to']);
-        }
-
-        if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('title', 'like', "%{$filters['search']}%")
-                  ->orWhere('description', 'like', "%{$filters['search']}%");
-            });
-        }
-
-        $sortField = $filters['sort'] ?? 'created_at';
-        $sortDir = $filters['dir'] ?? 'desc';
-
-        return $query->orderBy($sortField, $sortDir)->paginate($filters['per_page'] ?? 15);
+        $this->assertNotEmpty($scores);
+        $this->assertCount(2, $scores);
     }
 }
 ```
@@ -664,12 +650,12 @@ class TicketRepository
 
 Cuplikan kode menunjukkan implementasi production-ready dari:
 
-1. **SAW Service**: Algoritma multi-kriteria dengan caching
-2. **Ticket Controller**: Create & update dengan event dispatching
-3. **Notification Listener**: Synchronous notification processing
-4. **Status Validation**: State machine pattern
-5. **Permission Policy**: Fine-grained authorization
-6. **Event Listener**: Event-driven architecture
-7. **API Integration**: Sanctum token authentication
+1. **SAW Service**: Algoritma multi-kriteria dengan caching terpusat
+2. **Ticket Service**: Service layer pattern dengan exception handling
+3. **Portal Controller**: Inertia.js response dengan shared SAW scores
+4. **Ticket Model**: SLA tracking, UUID generation, cancellable checks
+5. **Permission Policy**: Fine-grained authorization dengan isStaff() helper
+6. **Ticket Exception**: Domain-specific exceptions untuk validasi bisnis
+7. **API Integration**: Sanctum token authentication dengan rate limiting
 
-Semua code mengikuti Laravel best practices dan SOLID principles.
+Semua code mengikuti Laravel best practices dan Service Layer pattern.

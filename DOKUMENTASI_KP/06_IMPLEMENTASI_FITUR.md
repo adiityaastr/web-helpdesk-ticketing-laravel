@@ -48,173 +48,127 @@ Tiket closed
 #### **Create Ticket**
 
 ```php
-// app/Http/Controllers/TicketController.php
-public function store(StoreTicketRequest $request)
+// app/Services/TicketService.php
+public function createTicket(Request $request, User $user): Ticket
 {
-    // 1. Validasi input (dilakukan di StoreTicketRequest)
-    
-    // 2. Create ticket
-    $ticket = Ticket::create([
-        'uuid' => Str::uuid(),
-        'user_id' => auth()->id(),
-        'category_id' => $request->category_id,
-        'title' => $request->title,
-        'description' => $request->description,
-        'priority' => $request->priority ?? 'medium',
-        'status' => 'open',
-    ]);
-    
-    // 3. Handle attachments
+    $attachmentPaths = [];
     if ($request->hasFile('attachments')) {
-        foreach ($request->file('attachments') as $file) {
-            $path = $file->store('tickets', 'public');
-            $ticket->attachments()->create(['path' => $path]);
+        foreach ($request->file('attachments') as $attachment) {
+            $attachmentPaths[] = $attachment->store('tickets/attachments', 'public');
         }
     }
-    
-    // 4. Calculate SAW score
-    $sawScore = app(SawService::class)->calculateScore($ticket);
-    $ticket->update(['saw_score' => $sawScore]);
-    
-    // 5. Dispatch event
-    event(new TicketCreated($ticket));
-    
-    // 6. Log activity
-    ActivityLog::create([
-        'user_id' => auth()->id(),
-        'ticket_id' => $ticket->id,
-        'action' => 'create',
-        'description' => 'Created ticket: ' . $ticket->title,
+
+    $ticket = Ticket::query()->create([
+        'user_id' => $user->id,
+        'category_id' => $request->integer('category_id'),
+        'title' => $request->string('title'),
+        'description' => $request->string('description'),
+        'priority' => $request->input('priority'),
+        'status' => 'open',
     ]);
-    
-    // 7. Return response
-    return redirect()->route('tickets.show', $ticket)
-        ->with('success', 'Ticket created successfully');
+
+    // Attachments disimpan sebagai komentar pertama
+    $ticket->comments()->create([
+        'user_id' => $user->id,
+        'message' => 'Tiket berhasil dibuat.',
+        'is_internal' => false,
+        'attachments' => $attachmentPaths,
+    ]);
+
+    $this->logActivity($ticket, $user, 'created', 'Tiket dibuat oleh pelapor.');
+    $this->notifyRelatedUsers($ticket, 'created');
+    $this->invalidateTicketCaches($ticket, $user->id);
+
+    return $ticket;
 }
 ```
 
 #### **Update Status**
 
 ```php
-public function updateStatus(Ticket $ticket, Request $request)
+// app/Services/TicketService.php
+public function updateTicket(Ticket $ticket, array $payload, User $user): Ticket
 {
-    // 1. Check authorization
-    $this->authorize('update', $ticket);
-    
-    // 2. Validate status transition
-    if (!$ticket->canTransitionTo($request->status)) {
-        return back()->with('error', 'Invalid status transition');
-    }
-    
-    // 3. Get old status
     $oldStatus = $ticket->status;
-    
-    // 4. Update status
-    $ticket->update(['status' => $request->status]);
-    
-    // 5. Handle status-specific logic
-    if ($request->status === 'resolved') {
-        $ticket->update(['resolved_at' => now()]);
-    } elseif ($request->status === 'closed') {
-        $ticket->update(['resolved_confirmed_at' => now()]);
-    } elseif ($request->status === 'cancelled') {
-        $ticket->update(['cancelled_at' => now()]);
+    $oldAssignee = $ticket->assigned_to;
+
+    if (isset($payload['status']) && $payload['status'] === 'resolved' && $oldStatus !== 'resolved') {
+        $payload['resolved_at'] = now();
     }
-    
-    // 6. Dispatch event
-    event(new TicketStatusChanged($ticket, $oldStatus, $request->status));
-    
-    // 7. Log activity
-    ActivityLog::create([
-        'user_id' => auth()->id(),
-        'ticket_id' => $ticket->id,
-        'action' => 'update_status',
-        'description' => "Changed status from {$oldStatus} to {$request->status}",
-    ]);
-    
-    return back()->with('success', 'Status updated');
+    if (isset($payload['status']) && $payload['status'] === 'cancelled' && $oldStatus !== 'cancelled') {
+        $payload['cancelled_at'] = now();
+    }
+
+    $ticket->update($payload);
+    $this->invalidateTicketCaches($ticket);
+
+    $changes = [];
+    if ($oldStatus !== $ticket->status) {
+        $changes[] = "Status berubah dari {$oldStatus} menjadi {$ticket->status}";
+    }
+
+    if (! empty($changes)) {
+        $this->logActivity($ticket, $user, 'updated', implode('. ', $changes));
+    }
+
+    $this->notifyRelatedUsers($ticket, 'updated');
+    return $ticket;
 }
 ```
 
-#### **Status Transition Validation**
+#### **Validasi Status Flow**
 
 ```php
 // app/Models/Ticket.php
-public function canTransitionTo($newStatus)
+public function isCancellable(): bool
 {
-    $validTransitions = [
-        'open' => ['in_progress', 'cancelled'],
-        'in_progress' => ['resolved', 'cancelled'],
-        'resolved' => ['closed', 'in_progress'],
-        'closed' => [],
-        'cancelled' => [],
-    ];
-    
-    return in_array($newStatus, $validTransitions[$this->status] ?? []);
+    return in_array($this->status, ['open', 'in_progress']);
 }
-```
 
 ### Error Handling & Edge Cases
 
-#### Error Handling
+#### Error Handling (Service Layer + Exception Pattern)
 
 ```php
-// app/Http/Controllers/TicketController.php
-public function store(StoreTicketRequest $request)
+// app/Services/TicketService.php
+public function confirmResolution(Ticket $ticket, User $user): Ticket
 {
-    try {
-        DB::beginTransaction();
-        
-        // Create ticket
-        $ticket = Ticket::create([...]);
-        
-        // Handle attachments
-        if ($request->hasFile('attachments')) {
-            try {
-                foreach ($request->file('attachments') as $file) {
-                    $path = $file->store('tickets/' . $ticket->id, 'public');
-                    $ticket->attachments()->create(['path' => $path]);
-                }
-            } catch (Exception $e) {
-                Log::error('File upload failed', ['error' => $e->getMessage()]);
-                throw new FileUploadException('File upload gagal');
-            }
-        }
-        
-        // Calculate SAW score
-        try {
-            $sawScore = app(SawService::class)->calculateScore($ticket);
-            $ticket->update(['saw_score' => $sawScore]);
-        } catch (Exception $e) {
-            Log::warning('SAW calculation failed', ['ticket_id' => $ticket->id]);
-            // Continue tanpa SAW score
-        }
-        
-        // Dispatch event
-        event(new TicketCreated($ticket));
-        
-        DB::commit();
-        
-        return redirect()->route('tickets.show', $ticket)
-            ->with('success', 'Ticket created successfully');
-            
-    } catch (Exception $e) {
-        DB::rollBack();
-        Log::error('Ticket creation failed', ['error' => $e->getMessage()]);
-        
-        return back()->withInput()
-            ->with('error', 'Gagal membuat tiket. Silakan coba lagi.');
+    if ($ticket->user_id !== $user->id) {
+        throw TicketException::unauthorized();
     }
+    if ($ticket->status !== 'resolved') {
+        throw TicketException::notResolved();
+    }
+    if ($ticket->resolved_confirmed_at) {
+        throw TicketException::alreadyConfirmed();
+    }
+
+    $ticket->update([
+        'resolved_confirmed_at' => now(),
+        'status' => 'closed',
+    ]);
+
+    $ticket->comments()->create([
+        'user_id' => $user->id,
+        'message' => 'Pelapor mengonfirmasi penyelesaian. Tiket ditutup.',
+        'is_internal' => false,
+    ]);
+
+    $this->logActivity($ticket, $user, 'confirmed', 'Pelapor mengonfirmasi penyelesaian tiket.');
+    $this->notifyRelatedUsers($ticket, 'confirmed');
+    $this->invalidateTicketCaches($ticket);
+
+    return $ticket;
 }
 ```
 
 #### Edge Cases
 
 1. **Tiket tanpa kategori**: Validasi di request, kategori wajib
-2. **File upload gagal**: Rollback transaction, user bisa retry
-3. **SAW calculation error**: Log warning, lanjut tanpa SAW score
-4. **Notification send gagal**: Queue retry 3x, log error
-5. **Database connection error**: Automatic retry dengan exponential backoff
+2. **File upload gagal**: Exception handling di Service layer
+3. **SAW calculation error**: Cache-safe, return array kosong via try/catch di SawService
+4. **Konfirmasi ganda**: TicketException::alreadyConfirmed() mencegah konfirmasi ulang
+5. **Cancel tiket non-aktif**: isCancellable() check di model
 6. **Concurrent ticket creation**: Database lock, FIFO processing
 
 ---
@@ -273,18 +227,18 @@ class SawService
         $normalized = [
             'r1' => $this->normalize($criteria['C1'], 4, 'benefit'),
             'r2' => $this->normalize($criteria['C2'], 100, 'benefit'),
-            'r3' => $this->normalize($criteria['C3'], 1440, 'cost'),
+            'r3' => $this->normalize($criteria['C3'], 1440, 'benefit'),
             'r4' => $this->normalize($criteria['C4'], 10, 'benefit'),
-            'r5' => $this->normalize($criteria['C5'], 5, 'benefit'),
+            'r5' => $this->normalize($criteria['C5'], 5, 'cost'),
         ];
         
         // 5. Get weights
         $weights = $configs->pluck('weight', 'code')->toArray();
         
-        // 6. Calculate weighted sum
+        // 6. Calculate weighted sum (default weights)
         $score = (
-            ($weights['C1'] ?? 0.30) * $normalized['r1'] +
-            ($weights['C2'] ?? 0.25) * $normalized['r2'] +
+            ($weights['C1'] ?? 0.25) * $normalized['r1'] +
+            ($weights['C2'] ?? 0.30) * $normalized['r2'] +
             ($weights['C3'] ?? 0.20) * $normalized['r3'] +
             ($weights['C4'] ?? 0.15) * $normalized['r4'] +
             ($weights['C5'] ?? 0.10) * $normalized['r5']

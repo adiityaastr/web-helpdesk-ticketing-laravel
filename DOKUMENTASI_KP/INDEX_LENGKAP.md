@@ -141,7 +141,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 | 4 | `04_activity_saw.puml` | Alur perhitungan SAW score | Activity |
 | 5 | `05_flowchart_login.puml` | Proses login & autentikasi | Flowchart |
 | 6 | `06_flowchart_buat_tiket.puml` | Proses pembuatan tiket | Flowchart |
-| 7 | `07_er_diagram.puml` | Entity Relationship Diagram (10 tabel) | ER |
+| 7 | `07_er_diagram.puml` | Entity Relationship Diagram | ER |
 | 8 | `08_sequence_tiket.puml` | Alur sequence buat tiket | Sequence |
 | 9 | `09_class_diagram.puml` | Model, Controller, Service, Policy | Class |
 | 10 | `10_deployment_diagram.puml` | Deployment architecture | Deployment |
@@ -154,8 +154,8 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap** pengembangan sistem **
 - **Total File Markdown**: 13 file
 - **Total PlantUML Diagrams**: 10 diagram
 - **Total Size**: ~140 KB
-- **Total Halaman**: ~70 halaman
-- **Total Kata**: ~20,000+ kata
+- **Total Halaman**: ~75 halaman
+- **Total Kata**: ~22,000+ kata
 
 ### Breakdown per File
 | File | Size | Halaman | Topik |
@@ -385,7 +385,7 @@ Dokumentasi KerjaPraktik ini mencakup **laporan lengkap & komprehensif** tentang
 
 ---
 
-**Tanggal**: 8 Mei 2026  
-**Versi**: 1.0  
+**Tanggal**: 6 Juni 2026  
+**Versi**: 1.1  
 **Penulis**: Tim Development KerjaPraktik  
 **Total Waktu Baca**: ~90 menit (semua file)

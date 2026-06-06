@@ -27,17 +27,16 @@ Lihat file: `diagrams/02_use_case_diagram.puml`
 | UC10 | View Dashboard | Staff melihat dashboard dengan statistik & beban kerja |
 | UC11 | Manage User | Staff create, read, update, delete user & assign role |
 | UC12 | Manage Category | Staff create, read, update, delete kategori tiket |
-| UC13 | Configure SAW | Staff konfigurasi bobot kriteria SAW (C1-C5) |
-| UC14 | View Analytics | Staff melihat analytics & reporting |
-| UC15 | Manage Knowledge Base | Staff create, read, update, delete artikel knowledge base |
+| UC13 | View Analytics | Staff melihat analytics & reporting |
+| UC14 | Manage Knowledge Base | Staff create, read, update, delete artikel knowledge base |
 
 #### **System Use Cases**
 
 | UC | Nama | Deskripsi |
 |----|----|-----------|
-| UC16 | Send Notification | Sistem mengirim notifikasi ke user yang terkait |
-| UC17 | Calculate SAW Score | Sistem menghitung skor SAW untuk setiap tiket |
-| UC18 | Log Activity | Sistem mencatat semua aktivitas untuk audit trail |
+| UC15 | Send Notification | Sistem mengirim notifikasi ke user yang terkait |
+| UC16 | Calculate SAW Score | Sistem menghitung skor SAW untuk setiap tiket |
+| UC17 | Log Activity | Sistem mencatat semua aktivitas untuk audit trail |
 
 ---
 
@@ -87,11 +86,11 @@ Lihat file: `diagrams/04_activity_saw.puml`
    - Ambil semua tiket dari database
    - Ambil SAW config (bobot W1-W5)
    - **Normalisasi data**:
-     - C1 (Priority): r1 = C1 / max(C1)
-     - C2 (SLA Urgency): r2 = C2 / max(C2)
-     - C3 (Wait Time): r3 = min(C3) / C3 (cost)
-     - C4 (Customer Activity): r4 = C4 / max(C4)
-     - C5 (Complexity): r5 = C5 / max(C5)
+      - C1 (Priority): r1 = C1 / max(C1)
+      - C2 (SLA Urgency): r2 = C2 / max(C2)
+      - C3 (Wait Time): r3 = C3 / max(C3)
+      - C4 (Customer Activity): r4 = C4 / max(C4)
+      - C5 (Complexity): r5 = min(C5) / C5 (cost)
    - **Weighted Sum**: V(i) = (W1×r1) + (W2×r2) + (W3×r3) + (W4×r4) + (W5×r5)
    - **Ranking**: Sort tiket by V(i) DESC
    - Cache scores ke file (TTL 60 detik)

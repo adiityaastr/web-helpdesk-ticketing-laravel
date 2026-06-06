@@ -133,8 +133,8 @@ Semua diagram tersimpan di folder `diagrams/`:
 
 - **Total File Markdown**: 13 file
 - **Total PlantUML Diagrams**: 10 diagram
-- **Total Halaman**: ~60 halaman
-- **Total Kata**: ~15,000+ kata
+- **Total Halaman**: ~70 halaman
+- **Total Kata**: ~20,000+ kata
 - **Waktu Pembuatan**: 4-6 jam
 
 ---
@@ -157,6 +157,6 @@ Semua diagram tersimpan di folder `diagrams/`:
 
 ---
 
-**Terakhir diupdate**: 8 Mei 2026  
-**Versi**: 1.0  
+**Terakhir diupdate**: 6 Juni 2026  
+**Versi**: 1.1  
 **Status**: Selesai

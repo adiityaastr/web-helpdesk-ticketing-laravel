@@ -30,11 +30,11 @@ Dimana:
 
 | Kode | Kriteria | Tipe | Bobot |
 |------|----------|------|-------|
-| C1 | Priority | Benefit | 0.30 |
-| C2 | SLA Urgency | Benefit | 0.25 |
-| C3 | Wait Time | Cost | 0.20 |
-| C4 | Customer Activity | Benefit | 0.15 |
-| C5 | Complexity | Benefit | 0.10 |
+| C1 | Tingkat Prioritas | Benefit | 0.25 |
+| C2 | Urgensi SLA | Benefit | 0.30 |
+| C3 | Waktu Tunggu | Benefit | 0.20 |
+| C4 | Aktivitas Pelanggan | Benefit | 0.15 |
+| C5 | Kompleksitas | Cost | 0.10 |
 
 **Tipe**:
 - **Benefit**: Semakin tinggi semakin baik (normalisasi: nilai/max)
@@ -55,17 +55,17 @@ C2 (SLA Urgency): 0-100
   - Dihitung dari: 100 - (minutesLeft / 1440 * 100)
   - Semakin dekat deadline semakin tinggi
 
-C3 (Wait Time): minutes
+C3 (Wait Time): minutes (benefit)
   - Dihitung dari: now() - created_at
-  - Semakin lama menunggu semakin tinggi
+  - Semakin lama menunggu semakin tinggi prioritas
 
 C4 (Customer Activity): 0-10
-  - Dihitung dari: jumlah comments (max 10)
-  - Semakin banyak interaksi semakin tinggi
+  - Dihitung dari: jumlah tiket user
+  - Semakin banyak tiket semakin tinggi
 
-C5 (Complexity): 1-5
-  - Dihitung dari: description length, keywords, attachments
-  - Semakin kompleks semakin tinggi
+C5 (Complexity): length (cost)
+  - Dihitung dari: panjang deskripsi (mb_strlen)
+  - Semakin pendek semakin tinggi prioritas
 ```
 
 #### **3. Normalisasi Nilai**
@@ -88,14 +88,14 @@ Contoh C1 (Priority):
 ```
 r_ij = min(x_j) / x_ij
 
-Contoh C3 (Wait Time):
-  r_i3 = min_wait_time / wait_time_i
+Contoh C5 (Complexity):
+  r_i5 = min_complexity / complexity_i
   
-  Jika min_wait_time = 10 menit, wait_time = 100 menit:
-    r_i3 = 10 / 100 = 0.1
+  Jika min_complexity = 50 karakter, complexity = 200 karakter:
+    r_i5 = 50 / 200 = 0.25
   
-  Jika min_wait_time = 10 menit, wait_time = 10 menit:
-    r_i3 = 10 / 10 = 1.0
+  Jika min_complexity = 50 karakter, complexity = 50 karakter:
+    r_i5 = 50 / 50 = 1.0
 ```
 
 #### **4. Hitung Weighted Sum**
@@ -104,9 +104,9 @@ Contoh C3 (Wait Time):
 V(i) = (w1 × r_i1) + (w2 × r_i2) + (w3 × r_i3) + (w4 × r_i4) + (w5 × r_i5)
 
 Contoh:
-V(i) = (0.30 × 1.0) + (0.25 × 0.8) + (0.20 × 0.5) + (0.15 × 0.9) + (0.10 × 0.7)
-     = 0.30 + 0.20 + 0.10 + 0.135 + 0.07
-     = 0.805
+V(i) = (0.25 × 1.0) + (0.30 × 0.8) + (0.20 × 0.5) + (0.15 × 0.9) + (0.10 × 0.7)
+     = 0.25 + 0.24 + 0.10 + 0.135 + 0.07
+     = 0.795
 ```
 
 #### **5. Ranking**
@@ -136,46 +136,46 @@ Tiket D: V = 0.65 → Rank 4 (Prioritas terendah)
 Tiket A:
   r_A1 = 4 / 4 = 1.0
   r_A2 = 90 / 100 = 0.9
-  r_A3 = 30 / 120 = 0.25 (cost: min_wait=30)
+  r_A3 = 120 / 120 = 1.0
   r_A4 = 8 / 10 = 0.8
-  r_A5 = 4 / 5 = 0.8
+  r_A5 = 50 / 200 = 0.25 (cost: min_complexity=50)
 
 Tiket B:
   r_B1 = 3 / 4 = 0.75
   r_B2 = 70 / 100 = 0.7
-  r_B3 = 30 / 60 = 0.5
+  r_B3 = 60 / 120 = 0.5
   r_B4 = 5 / 10 = 0.5
-  r_B5 = 3 / 5 = 0.6
+  r_B5 = 50 / 150 = 0.333
 
 Tiket C:
   r_C1 = 2 / 4 = 0.5
   r_C2 = 50 / 100 = 0.5
-  r_C3 = 30 / 30 = 1.0
+  r_C3 = 30 / 120 = 0.25
   r_C4 = 3 / 10 = 0.3
-  r_C5 = 2 / 5 = 0.4
+  r_C5 = 50 / 100 = 0.5
 ```
 
 **Weighted Sum**:
 
 ```
-V_A = (0.30 × 1.0) + (0.25 × 0.9) + (0.20 × 0.25) + (0.15 × 0.8) + (0.10 × 0.8)
-    = 0.30 + 0.225 + 0.05 + 0.12 + 0.08
-    = 0.775
+V_A = (0.25 × 1.0) + (0.30 × 0.9) + (0.20 × 1.0) + (0.15 × 0.8) + (0.10 × 0.25)
+    = 0.25 + 0.27 + 0.20 + 0.12 + 0.025
+    = 0.865
 
-V_B = (0.30 × 0.75) + (0.25 × 0.7) + (0.20 × 0.5) + (0.15 × 0.5) + (0.10 × 0.6)
-    = 0.225 + 0.175 + 0.10 + 0.075 + 0.06
-    = 0.635
+V_B = (0.25 × 0.75) + (0.30 × 0.7) + (0.20 × 0.5) + (0.15 × 0.5) + (0.10 × 0.333)
+    = 0.1875 + 0.21 + 0.10 + 0.075 + 0.0333
+    = 0.606
 
-V_C = (0.30 × 0.5) + (0.25 × 0.5) + (0.20 × 1.0) + (0.15 × 0.3) + (0.10 × 0.4)
-    = 0.15 + 0.125 + 0.20 + 0.045 + 0.04
-    = 0.56
+V_C = (0.25 × 0.5) + (0.30 × 0.5) + (0.20 × 0.25) + (0.15 × 0.3) + (0.10 × 0.5)
+    = 0.125 + 0.15 + 0.05 + 0.045 + 0.05
+    = 0.42
 ```
 
 **Ranking**:
 ```
-Tiket A: 0.775 → Rank 1 (Prioritas tertinggi)
-Tiket B: 0.635 → Rank 2
-Tiket C: 0.56  → Rank 3 (Prioritas terendah)
+Tiket A: 0.865 → Rank 1 (Prioritas tertinggi)
+Tiket B: 0.606 → Rank 2
+Tiket C: 0.42  → Rank 3 (Prioritas terendah)
 ```
 
 ### Kompleksitas Algoritma
