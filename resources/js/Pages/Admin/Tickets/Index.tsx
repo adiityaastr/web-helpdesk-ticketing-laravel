@@ -16,6 +16,9 @@ type TicketItem = {
     assignee: { id: number; name: string } | null;
     created_at: string | null;
     is_overdue: boolean;
+    is_sla_warning: boolean;
+    sla_remaining: string | null;
+    is_resolved_within_sla: boolean | null;
     saw_score?: number;
 };
 
@@ -96,6 +99,7 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
                                 <th className="px-5 py-3">Kategori</th>
                                 <th className="px-5 py-3">Prioritas</th>
                                 <th className="px-5 py-3">Status</th>
+                                <th className="px-5 py-3">SLA</th>
                                 <th className="px-5 py-3">Petugas</th>
                                 <th className="px-5 py-3">Tanggal</th>
                                 <th className="px-5 py-3">SAW</th>
@@ -103,20 +107,30 @@ export default React.memo(function AdminTicketIndex({ tickets, filters, statuses
                         </thead>
                         <tbody>
                             {tickets.data.length === 0 && (
-                                <tr><td className="px-5 py-8 text-center text-slate-400" colSpan={8}>Tidak ada tiket.</td></tr>
+                                <tr><td className="px-5 py-8 text-center text-slate-400" colSpan={9}>Tidak ada tiket.</td></tr>
                             )}
                             {tickets.data.map((ticket) => (
                                 <tr key={ticket.id} className="border-b border-slate-100 last:border-0">
                                     <td className="px-5 py-3">
-                                        <div className="flex items-center gap-2">
-                                            <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-slate-900 hover:underline">{ticket.title}</Link>
-                                            {ticket.is_overdue && <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700">SLA</span>}
-                                        </div>
+                                        <Link href={`/admin/tickets/${ticket.id}`} className="font-medium text-slate-900 hover:underline">{ticket.title}</Link>
                                     </td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.reporter?.name ?? '-'}</td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.category?.name ?? '-'}</td>
                                     <td className="px-5 py-3"><Badge variant="priority" value={ticket.priority} /></td>
                                     <td className="px-5 py-3"><Badge variant="status" value={ticket.status} /></td>
+                                    <td className="px-5 py-3">
+                                         {ticket.sla_remaining ? (
+                                             <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ticket.is_overdue ? 'bg-rose-50 text-rose-700' : ticket.is_sla_warning ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                 {ticket.sla_remaining.replace('-', '')}
+                                             </span>
+                                         ) : (ticket.status === 'resolved' || ticket.status === 'closed') && ticket.is_resolved_within_sla != null ? (
+                                             <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ticket.is_resolved_within_sla ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                                                 {ticket.is_resolved_within_sla ? 'Sesuai' : 'Terlambat'}
+                                             </span>
+                                         ) : (
+                                             <span className="text-slate-300">-</span>
+                                         )}
+                                    </td>
                                     <td className="px-5 py-3 text-slate-500">{ticket.assignee?.name ?? 'Belum'}</td>
                                     <td className="px-5 py-3 text-slate-400">{ticket.created_at ?? '-'}</td>
                                     <td className="px-5 py-3">

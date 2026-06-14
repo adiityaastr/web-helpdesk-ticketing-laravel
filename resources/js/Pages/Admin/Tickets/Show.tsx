@@ -25,6 +25,8 @@ type Ticket = {
     created_at: string | null;
     is_overdue: boolean;
     is_sla_warning: boolean;
+    sla_remaining: string | null;
+    is_resolved_within_sla: boolean | null;
     category: { id: number; name: string } | null;
     reporter: { id: number; name: string; department: string | null } | null;
     assignee: { id: number; name: string } | null;
@@ -177,6 +179,24 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                             <div><dt className="text-slate-400">Pelapor</dt><dd className="font-medium text-slate-900">{ticket.reporter?.name ?? '-'}</dd></div>
                             {ticket.reporter?.department && <div><dt className="text-slate-400">Departemen</dt><dd className="font-medium text-slate-900">{ticket.reporter.department}</dd></div>}
                             <div><dt className="text-slate-400">Kategori</dt><dd className="font-medium text-slate-900">{ticket.category?.name ?? '-'}</dd></div>
+                            {ticket.sla_deadline && (
+                                <div>
+                                    <dt className="text-slate-400">Batas SLA</dt>
+                                    <dd className="font-medium text-slate-900">
+                                        {ticket.sla_deadline}
+                                        {ticket.sla_remaining && (
+                                            <span className={`ml-1.5 text-xs font-semibold ${ticket.is_overdue ? 'text-rose-600' : ticket.is_sla_warning ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                                ({ticket.is_overdue ? 'Terlambat ' : ''}{ticket.sla_remaining.replace('-', '')})
+                                            </span>
+                                        )}
+                                        {ticket.resolved_at && ticket.is_resolved_within_sla != null && (
+                                            <span className={`ml-1.5 text-xs font-semibold ${ticket.is_resolved_within_sla ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                ({ticket.is_resolved_within_sla ? 'Sesuai SLA' : 'Melampaui SLA'})
+                                            </span>
+                                        )}
+                                    </dd>
+                                </div>
+                            )}
                             <div><dt className="text-slate-400">Ditugaskan</dt><dd className="font-medium text-slate-900">{ticket.assignee?.name ?? 'Belum ditugaskan'}</dd></div>
                             {ticket.resolved_at && <div><dt className="text-slate-400">Diselesaikan</dt><dd className="font-medium text-slate-900">{ticket.resolved_at}</dd></div>}
                             {ticket.resolved_confirmed_at && <div><dt className="text-slate-400">Dikonfirmasi</dt><dd className="font-medium text-emerald-600">{ticket.resolved_confirmed_at}</dd></div>}

@@ -36,6 +36,8 @@ class TicketResource extends JsonResource
             'updated_at' => $this->updated_at?->toDateTimeString(),
             'is_overdue' => $this->isOverdue(),
             'is_sla_warning' => $this->isSlaWarning(),
+            'sla_remaining' => $this->slaRemaining(),
+            'is_resolved_within_sla' => $this->isResolvedWithinSla(),
             'is_cancellable' => $this->isCancellable(),
             'is_deletable' => $this->status === 'open' || $this->status === 'cancelled',
             'saw_score' => $scores[$this->id] ?? null,

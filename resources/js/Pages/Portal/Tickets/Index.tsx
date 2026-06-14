@@ -14,6 +14,10 @@ type TicketItem = {
     category: { id: number; name: string } | null;
     assignee: { id: number; name: string } | null;
     created_at: string | null;
+    is_overdue: boolean;
+    is_sla_warning: boolean;
+    sla_remaining: string | null;
+    is_resolved_within_sla: boolean | null;
 };
 
 type Props = {
@@ -95,6 +99,15 @@ export default React.memo(function PortalTicketIndex({ tickets, filters, statuse
                                         <span className="font-mono text-xs text-slate-400">#{ticket.uuid?.slice(0, 8)}</span>
                                         <Badge variant="status" value={ticket.status} />
                                         <Badge variant="priority" value={ticket.priority} />
+                                        {ticket.sla_remaining ? (
+                                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ticket.is_overdue ? 'bg-rose-50 text-rose-700' : ticket.is_sla_warning ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                {ticket.sla_remaining.replace('-', '')}
+                                            </span>
+                                        ) : (ticket.status === 'resolved' || ticket.status === 'closed') && ticket.is_resolved_within_sla != null ? (
+                                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ticket.is_resolved_within_sla ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                                                {ticket.is_resolved_within_sla ? 'Sesuai' : 'Terlambat'}
+                                            </span>
+                                        ) : null}
                                     </div>
                                     <h4 className="mt-1 truncate text-sm font-medium text-slate-900">{ticket.title}</h4>
                                     <p className="mt-0.5 text-xs text-slate-500">{ticket.category?.name ?? '-'} &middot; {ticket.assignee?.name ?? 'Belum ditugaskan'}</p>

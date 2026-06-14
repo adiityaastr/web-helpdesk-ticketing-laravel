@@ -24,6 +24,8 @@ type Ticket = {
     created_at: string | null;
     is_overdue: boolean;
     is_sla_warning: boolean;
+    sla_remaining: string | null;
+    is_resolved_within_sla: boolean | null;
     is_cancellable: boolean;
     is_deletable: boolean;
     category: { id: number; name: string } | null;
@@ -256,6 +258,35 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                                 <Icon name="category" size={18} className="text-slate-400" />
                                 <div><dt className="text-slate-400">Kategori</dt><dd className="font-medium text-slate-900">{ticket.category?.name ?? '-'}</dd></div>
                             </div>
+                            {ticket.sla_deadline && (
+                                <div className="flex items-start gap-3">
+                                    <Icon
+                                        name="schedule"
+                                        size={18}
+                                        className={
+                                            ticket.resolved_at
+                                                ? (ticket.is_resolved_within_sla ? 'text-emerald-400' : 'text-rose-400')
+                                                : (ticket.is_overdue ? 'text-rose-400' : ticket.is_sla_warning ? 'text-amber-400' : 'text-emerald-400')
+                                        }
+                                    />
+                                    <div>
+                                        <dt className="text-slate-400">Batas SLA</dt>
+                                        <dd className="font-medium text-slate-900">
+                                            {ticket.sla_deadline}
+                                        </dd>
+                                        {ticket.sla_remaining && (
+                                            <dd className={`text-xs ${ticket.is_overdue ? 'text-rose-500' : ticket.is_sla_warning ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                                {ticket.is_overdue ? 'Terlambat ' : ''}{ticket.sla_remaining.replace('-', '')}
+                                            </dd>
+                                        )}
+                                        {ticket.resolved_at && ticket.is_resolved_within_sla != null && (
+                                            <dd className={`text-xs ${ticket.is_resolved_within_sla ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                {ticket.is_resolved_within_sla ? 'Selesai Tepat Waktu' : 'Selesai Melampaui SLA'}
+                                            </dd>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-start gap-3">
                                 <Icon name="person" size={18} className="text-slate-400" />
                                 <div><dt className="text-slate-400">Pelapor</dt><dd className="font-medium text-slate-900">{ticket.reporter?.name ?? '-'}</dd></div>

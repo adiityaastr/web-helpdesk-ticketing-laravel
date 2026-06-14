@@ -35,6 +35,7 @@ class TicketService
             'description' => $request->string('description'),
             'priority' => $request->input('priority'),
             'status' => 'open',
+            'sla_deadline' => Ticket::slaDeadlineForPriority($request->input('priority', 'low')),
         ]);
 
         $ticket->comments()->create([

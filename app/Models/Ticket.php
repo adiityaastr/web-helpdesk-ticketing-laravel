@@ -99,8 +99,52 @@ class Ticket extends Model
         return now()->diffInHours($this->sla_deadline, false) <= 4 && now()->diffInHours($this->sla_deadline, false) > 0;
     }
 
+    public function slaRemaining(): ?string
+    {
+        if (! $this->sla_deadline) {
+            return null;
+        }
+
+        if (in_array($this->status, ['resolved', 'closed', 'cancelled'])) {
+            return null;
+        }
+
+        $totalMinutes = now()->diffInMinutes($this->sla_deadline, false);
+        $isPast = $totalMinutes < 0;
+        $totalMinutes = abs($totalMinutes);
+        $hours = intdiv($totalMinutes, 60);
+        $minutes = $totalMinutes % 60;
+
+        $prefix = $isPast ? '-' : '';
+
+        if ($hours > 0) {
+            return "{$prefix}{$hours}j {$minutes}m";
+        }
+
+        return "{$prefix}{$minutes}m";
+    }
+
+    public static function slaDeadlineForPriority(string $priority): \DateTime
+    {
+        return now()->addHours(match ($priority) {
+            'critical' => 8,
+            'high' => 24,
+            'medium' => 48,
+            default => 72,
+        });
+    }
+
     public function isCancellable(): bool
     {
         return in_array($this->status, ['open', 'in_progress']);
+    }
+
+    public function isResolvedWithinSla(): ?bool
+    {
+        if (! $this->resolved_at || ! $this->sla_deadline) {
+            return null;
+        }
+
+        return $this->resolved_at->lte($this->sla_deadline);
     }
 }
