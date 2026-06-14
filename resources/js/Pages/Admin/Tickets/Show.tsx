@@ -51,9 +51,12 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [showInternal, setShowInternal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showPriorityConfirm, setShowPriorityConfirm] = useState(false);
     const [commentProcessing, setCommentProcessing] = useState(false);
     const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
     const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
+
+    const slaHours: Record<string, number> = { critical: 8, high: 24, medium: 48, low: 72 };
 
     const updateForm = useForm({
         priority: ticket.priority ?? 'medium',
@@ -63,9 +66,25 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
 
     const submitUpdate = (e: FormEvent) => {
         e.preventDefault();
+        if (updateForm.data.priority !== ticket.priority) {
+            setShowPriorityConfirm(true);
+            return;
+        }
         updateForm.put(`/admin/tickets/${ticket.id}`, {
             onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
         });
+    };
+
+    const confirmPriorityUpdate = () => {
+        setShowPriorityConfirm(false);
+        updateForm.put(`/admin/tickets/${ticket.id}`, {
+            onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
+        });
+    };
+
+    const cancelPriorityUpdate = () => {
+        setShowPriorityConfirm(false);
+        updateForm.setData('priority', ticket.priority);
     };
 
     const handleCommentSubmit = (data: { message: string; is_internal?: boolean; attachments: File[] }) => {
@@ -231,6 +250,15 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
             </div>
 
             <ConfirmDialog open={showDeleteConfirm} title="Hapus Tiket" message="Yakin ingin menghapus tiket ini?" confirmLabel="Hapus" variant="danger" onConfirm={() => { router.delete(`/admin/tickets/${ticket.id}`); setShowDeleteConfirm(false); }} onCancel={() => setShowDeleteConfirm(false)} />
+            <ConfirmDialog
+                open={showPriorityConfirm}
+                title="Ubah Prioritas & SLA"
+                message={`Mengubah prioritas dari ${priorityLabel[ticket.priority]} (${slaHours[ticket.priority]} jam) ke ${priorityLabel[updateForm.data.priority]} (${slaHours[updateForm.data.priority]} jam) akan mengubah batas waktu SLA. Lanjutkan?`}
+                confirmLabel="Ya, Ubah"
+                variant="warning"
+                onConfirm={confirmPriorityUpdate}
+                onCancel={cancelPriorityUpdate}
+            />
         </AdminLayout>
     );
 });

@@ -66,9 +66,16 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): RedirectResponse
     {
         $this->authorize('update', $ticket);
+        $oldPriority = $ticket->priority;
         $this->ticketService->updateTicket($ticket, $request->validated(), $request->user());
         $this->notificationService->notifyTicketUpdate($ticket, 'updated', null, false);
-        return redirect()->route('admin.tickets.show', $ticket)->with('success', 'Tiket berhasil diperbarui.');
+
+        $message = 'Tiket berhasil diperbarui.';
+        if ($oldPriority !== $ticket->priority) {
+            $message = 'Prioritas dan batas waktu SLA berhasil diperbarui.';
+        }
+
+        return redirect()->route('admin.tickets.show', $ticket)->with('success', $message);
     }
 
     public function destroy(Ticket $ticket): RedirectResponse

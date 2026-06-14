@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             CategorySeeder::class,
             DepartmentSeeder::class,
+            UserSeeder::class,
         ]);
 
         $itDepartment = Department::where('name', 'IT')->first();

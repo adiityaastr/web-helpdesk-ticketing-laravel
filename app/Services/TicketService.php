@@ -58,6 +58,7 @@ class TicketService
     {
         $oldStatus = $ticket->status;
         $oldAssignee = $ticket->assigned_to;
+        $oldPriority = $ticket->priority;
 
         // Normalize missing fields
         $payload = array_merge([
@@ -86,9 +87,17 @@ class TicketService
 
         $ticket->update($payload);
 
+        if ($oldPriority !== $ticket->priority) {
+            $ticket->sla_deadline = Ticket::slaDeadlineForPriority($ticket->priority);
+            $ticket->save();
+        }
+
         $this->invalidateTicketCaches($ticket);
 
         $changes = [];
+        if ($oldPriority !== $ticket->priority) {
+            $changes[] = "Prioritas berubah dari {$oldPriority} menjadi {$ticket->priority}, SLA diperbarui";
+        }
         if ($oldStatus !== $ticket->status) {
             $changes[] = "Status berubah dari {$oldStatus} menjadi {$ticket->status}";
         }
