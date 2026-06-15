@@ -1,0 +1,74 @@
+### Base Variables
+@baseUrl = http://127.0.0.1:8000/api/v1
+@authToken = 1|laravel_sanctum_token_here...
+
+### 1. Register a New User
+POST {{baseUrl}}/register
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "User Testing",
+    "email": "testuser@example.com",
+    "password": "password123",
+    "password_confirmation": "password123"
+}
+
+### 2. Login User
+# After running this, copy the token from the response and paste it into @authToken above.
+POST {{baseUrl}}/login
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "testuser@example.com",
+    "password": "password123"
+}
+
+### 3. Get Authenticated User Details
+GET {{baseUrl}}/user
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 4. Get List of Tickets
+GET {{baseUrl}}/tickets
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 5. Filter Tickets by Status/Priority
+GET {{baseUrl}}/tickets?status=open&priority=high
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 6. Create a New Ticket
+POST {{baseUrl}}/tickets
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+    "category_id": 1,
+    "title": "Koneksi Internet Putus di Lantai 2",
+    "description": "Tidak bisa terhubung ke Wi-Fi kantor sejak pagi hari.",
+    "priority": "high"
+}
+
+### 7. Get Ticket Detail (Replace {ticket_id} with actual ticket ID/UUID)
+GET {{baseUrl}}/tickets/1
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### 8. Add Comment to Ticket (Replace {ticket_id} with actual ticket ID)
+POST {{baseUrl}}/tickets/1/comments
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+    "message": "Terima kasih, mohon bantuannya segera diperiksa."
+}
+
+### 9. Logout User
+POST {{baseUrl}}/logout
+Authorization: Bearer {{authToken}}
+Accept: application/json

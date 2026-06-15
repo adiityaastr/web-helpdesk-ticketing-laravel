@@ -13,5 +13,6 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
+        $this->seed(\Database\Seeders\DepartmentSeeder::class);
     }
 }
