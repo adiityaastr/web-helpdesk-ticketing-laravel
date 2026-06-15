@@ -24,11 +24,15 @@ type Props = {
 const actionLabel: Record<string, string> = {
     created: 'dibuat', updated: 'diperbarui', commented: 'dikomentari',
     resolved: 'diselesaikan', closed: 'ditutup', cancelled: 'dibatalkan',
+    cancel_requested: 'diminta untuk dibatalkan oleh admin',
+    cancel_confirmed: 'pembatalan disetujui pelapor',
+    cancel_rejected: 'pembatalan ditolak pelapor',
 };
 
 const actionIcon: Record<string, string> = {
     created: 'add_circle', updated: 'update', commented: 'chat',
     resolved: 'check_circle', closed: 'lock', cancelled: 'cancel',
+    cancel_requested: 'cancel', cancel_confirmed: 'check_circle', cancel_rejected: 'cancel',
 };
 
 export default function NotificationsIndex({ notifications }: Props) {

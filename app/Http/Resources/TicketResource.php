@@ -40,6 +40,7 @@ class TicketResource extends JsonResource
             'is_resolved_within_sla' => $this->isResolvedWithinSla(),
             'is_cancellable' => $this->isCancellable(),
             'is_deletable' => $this->status === 'open' || $this->status === 'cancelled',
+            'cancel_requested_by_admin' => $this->cancel_requested_by_admin,
             'saw_score' => $scores[$this->id] ?? null,
             'category' => [
                 'id' => $this->category?->id,

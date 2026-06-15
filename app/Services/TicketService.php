@@ -71,9 +71,16 @@ class TicketService
             $payload['cancelled_at'] = null;
         }
 
+        $isAdminCancel = false;
         if (isset($payload['status']) && $payload['status'] === 'cancelled' && $oldStatus !== 'cancelled') {
-            $payload['cancelled_at'] = now();
-            $payload['resolved_at'] = null;
+            if ($user->isStaff()) {
+                $payload['status'] = $oldStatus;
+                $payload['cancel_requested_by_admin'] = true;
+                $isAdminCancel = true;
+            } else {
+                $payload['cancelled_at'] = now();
+                $payload['resolved_at'] = null;
+            }
         }
 
         if (isset($payload['status']) && $payload['status'] === 'in_progress') {
@@ -98,7 +105,7 @@ class TicketService
         if ($oldPriority !== $ticket->priority) {
             $changes[] = "Prioritas berubah dari {$oldPriority} menjadi {$ticket->priority}, SLA diperbarui";
         }
-        if ($oldStatus !== $ticket->status) {
+        if ($oldStatus !== $ticket->status && !$isAdminCancel) {
             $changes[] = "Status berubah dari {$oldStatus} menjadi {$ticket->status}";
         }
         if ($oldAssignee !== $ticket->assigned_to) {
@@ -110,7 +117,12 @@ class TicketService
             $this->logActivity($ticket, $user, 'updated', implode('. ', $changes));
         }
 
-        $this->notifyRelatedUsers($ticket, 'updated');
+        if ($isAdminCancel) {
+            $this->logActivity($ticket, $user, 'cancel_requested', 'Admin mengajukan pembatalan tiket. Menunggu konfirmasi pelapor.');
+            $this->notifyRelatedUsers($ticket, 'cancel_requested');
+        } else {
+            $this->notifyRelatedUsers($ticket, 'updated');
+        }
 
         return $ticket;
     }
@@ -125,6 +137,50 @@ class TicketService
         $this->logActivity($ticket, $user, 'cancelled', 'Tiket dibatalkan oleh pelapor.');
 
         $this->notifyRelatedUsers($ticket, 'cancelled');
+        $this->invalidateTicketCaches($ticket, $ticket->user_id);
+
+        return $ticket;
+    }
+
+    public function confirmCancel(Ticket $ticket, User $user): Ticket
+    {
+        if ($ticket->user_id !== $user->id) {
+            throw TicketException::unauthorized();
+        }
+
+        if (!$ticket->cancel_requested_by_admin) {
+            throw new \RuntimeException('Tidak ada permintaan pembatalan dari admin untuk tiket ini.');
+        }
+
+        $ticket->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancel_requested_by_admin' => false,
+        ]);
+
+        $this->logActivity($ticket, $user, 'cancel_confirmed', 'Pelapor menyetujui pembatalan tiket.');
+        $this->notifyRelatedUsers($ticket, 'cancel_confirmed');
+        $this->invalidateTicketCaches($ticket, $ticket->user_id);
+
+        return $ticket;
+    }
+
+    public function rejectCancel(Ticket $ticket, User $user): Ticket
+    {
+        if ($ticket->user_id !== $user->id) {
+            throw TicketException::unauthorized();
+        }
+
+        if (!$ticket->cancel_requested_by_admin) {
+            throw new \RuntimeException('Tidak ada permintaan pembatalan dari admin untuk tiket ini.');
+        }
+
+        $ticket->update([
+            'cancel_requested_by_admin' => false,
+        ]);
+
+        $this->logActivity($ticket, $user, 'cancel_rejected', 'Pelapor menolak pembatalan tiket.');
+        $this->notifyRelatedUsers($ticket, 'cancel_rejected');
         $this->invalidateTicketCaches($ticket, $ticket->user_id);
 
         return $ticket;

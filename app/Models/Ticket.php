@@ -26,6 +26,7 @@ class Ticket extends Model
         'cancelled_at',
         'rating',
         'rating_comment',
+        'cancel_requested_by_admin',
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class Ticket extends Model
             'resolved_confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'rating' => 'integer',
+            'cancel_requested_by_admin' => 'boolean',
         ];
     }
 
@@ -136,7 +138,7 @@ class Ticket extends Model
 
     public function isCancellable(): bool
     {
-        return in_array($this->status, ['open', 'in_progress']);
+        return in_array($this->status, ['open', 'in_progress']) && ! $this->cancel_requested_by_admin;
     }
 
     public function isResolvedWithinSla(): ?bool

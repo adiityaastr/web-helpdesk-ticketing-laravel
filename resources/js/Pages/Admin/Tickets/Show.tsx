@@ -52,6 +52,7 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     const [showInternal, setShowInternal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showPriorityConfirm, setShowPriorityConfirm] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [commentProcessing, setCommentProcessing] = useState(false);
     const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
     const commentLocked = ticket.status === 'closed' || ticket.status === 'cancelled';
@@ -66,6 +67,10 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
 
     const submitUpdate = (e: FormEvent) => {
         e.preventDefault();
+        if (updateForm.data.status === 'cancelled' && ticket.status !== 'cancelled') {
+            setShowCancelConfirm(true);
+            return;
+        }
         if (updateForm.data.priority !== ticket.priority) {
             setShowPriorityConfirm(true);
             return;
@@ -85,6 +90,18 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
     const cancelPriorityUpdate = () => {
         setShowPriorityConfirm(false);
         updateForm.setData('priority', ticket.priority);
+    };
+
+    const confirmCancelUpdate = () => {
+        setShowCancelConfirm(false);
+        updateForm.put(`/admin/tickets/${ticket.id}`, {
+            onSuccess: () => router.reload({ only: ['ticket', 'comments', 'activityLogs'] }),
+        });
+    };
+
+    const cancelCancelUpdate = () => {
+        setShowCancelConfirm(false);
+        updateForm.setData('status', ticket.status && ticket.status !== 'open' ? ticket.status : '');
     };
 
     const handleCommentSubmit = (data: { message: string; is_internal?: boolean; attachments: File[] }) => {
@@ -120,7 +137,13 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-lg font-semibold text-slate-900">{ticket.title}</h1>
-                        <Badge variant="status" value={ticket.status} />
+                        {ticket.cancel_requested_by_admin ? (
+                            <span className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                                Menunggu Pembatalan oleh User
+                            </span>
+                        ) : (
+                            <Badge variant="status" value={ticket.status} />
+                        )}
                         <Badge variant="priority" value={ticket.priority} />
                     </div>
                     <p className="mt-1 text-sm text-slate-500">#{ticket.uuid?.slice(0, 8)} -- Dibuat {ticket.created_at}</p>
@@ -138,7 +161,7 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                         <p className="whitespace-pre-wrap text-sm text-slate-600">{ticket.description}</p>
                     </div>
 
-                    {!commentLocked && (
+                    {!commentLocked && !ticket.cancel_requested_by_admin && (
                         <form onSubmit={submitUpdate} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
                             <h2 className="text-sm font-semibold text-slate-900">Kelola Tiket</h2>
                             <div className="grid gap-3 sm:grid-cols-3">
@@ -168,6 +191,15 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                             </div>
                             <button type="submit" className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50" disabled={updateForm.processing}>Simpan Perubahan</button>
                         </form>
+                    )}
+
+                    {ticket.cancel_requested_by_admin && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5">
+                            <div className="flex items-center gap-2 text-sm text-amber-800">
+                                <Icon name="warning" size={16} />
+                                Menunggu konfirmasi pembatalan tiket dari pelapor (user).
+                            </div>
+                        </div>
                     )}
 
                     {commentLocked && (
@@ -258,6 +290,15 @@ export default React.memo(function AdminTicketShow({ ticket: ticketProp, comment
                 variant="warning"
                 onConfirm={confirmPriorityUpdate}
                 onCancel={cancelPriorityUpdate}
+            />
+            <ConfirmDialog
+                open={showCancelConfirm}
+                title="Batalkan Tiket"
+                message="Yakin ingin membatalkan tiket ini? Sebagai admin, pastikan Anda telah mengonfirmasi pembatalan ini kepada pengguna."
+                confirmLabel="Ya, Batalkan"
+                variant="danger"
+                onConfirm={confirmCancelUpdate}
+                onCancel={cancelCancelUpdate}
             />
         </AdminLayout>
     );

@@ -7,8 +7,10 @@ define('LARAVEL_START', microtime(true));
 require __DIR__.'/vendor/autoload.php';
 
 $app = require_once __DIR__.'/bootstrap/app.php';
-
 $kernel = $app->make(Kernel::class);
+
+// Bootstrap Laravel fully
+$app->make(\Illuminate\Foundation\Console\Kernel::class)->bootstrap();
 
 echo "Logging in User 2...\n";
 auth()->loginUsingId(2);

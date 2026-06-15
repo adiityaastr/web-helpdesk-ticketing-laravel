@@ -5,5 +5,5 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 foreach (App\Models\User::all() as $user) {
-    echo $user->id . ': ' . $user->name . ' - Roles: ' . implode(', ', $user->roles->pluck('name')->toArray()) . "\n";
+    echo $user->id . ': ' . $user->name . ' (' . $user->email . ') - Roles: ' . implode(', ', $user->roles->pluck('name')->toArray()) . "\n";
 }

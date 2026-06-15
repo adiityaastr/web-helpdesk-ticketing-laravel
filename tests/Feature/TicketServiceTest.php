@@ -212,4 +212,39 @@ class TicketServiceTest extends TestCase
         $this->assertIsArray($detail);
         $this->assertCount(1, $detail['comments']);
     }
+
+    public function test_admin_cancel_request_flow()
+    {
+        $cust = User::factory()->create(['department_id' => null]);
+        $cust->assignRole('customer');
+        $staff = User::factory()->create(['department_id' => null]);
+        $staff->assignRole('staff');
+        $cat = Category::first();
+        
+        $rq = new Request(['title' => 'Cancel req', 'description' => 'desc', 'category_id' => $cat->id, 'priority' => 'low']);
+        $srv = new TicketService();
+        $t = $srv->createTicket($rq, $cust);
+
+        // Admin updates status to cancelled
+        $srv->updateTicket($t, ['status' => 'cancelled'], $staff);
+
+        // Verify status remains as open/original, and cancel_requested_by_admin flag is set to true
+        $this->assertEquals('open', $t->fresh()->status);
+        $this->assertTrue($t->fresh()->cancel_requested_by_admin);
+
+        // Customer rejects cancel request
+        $srv->rejectCancel($t, $cust);
+        $this->assertFalse($t->fresh()->cancel_requested_by_admin);
+        $this->assertEquals('open', $t->fresh()->status);
+
+        // Admin updates status to cancelled again
+        $srv->updateTicket($t, ['status' => 'cancelled'], $staff);
+        $this->assertTrue($t->fresh()->cancel_requested_by_admin);
+
+        // Customer confirms cancel request
+        $srv->confirmCancel($t, $cust);
+        $this->assertEquals('cancelled', $t->fresh()->status);
+        $this->assertFalse($t->fresh()->cancel_requested_by_admin);
+        $this->assertNotNull($t->fresh()->cancelled_at);
+    }
 }

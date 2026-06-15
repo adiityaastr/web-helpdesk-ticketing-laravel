@@ -54,6 +54,8 @@ Route::middleware('auth')->prefix('portal')->name('portal.')->group(function ():
         Route::post('/tickets/{ticket}/cancel', [PortalTicketController::class, 'cancel'])->name('tickets.cancel');
         Route::post('/tickets/{ticket}/confirm', [PortalTicketController::class, 'confirmResolution'])->name('tickets.confirm');
         Route::post('/tickets/{ticket}/reject', [PortalTicketController::class, 'rejectResolution'])->name('tickets.reject');
+        Route::post('/tickets/{ticket}/confirm-cancel', [PortalTicketController::class, 'confirmCancel'])->name('tickets.confirm-cancel');
+        Route::post('/tickets/{ticket}/reject-cancel', [PortalTicketController::class, 'rejectCancel'])->name('tickets.reject-cancel');
         Route::delete('/tickets/{ticket}', [PortalTicketController::class, 'destroy'])->name('tickets.destroy');
     });
 });

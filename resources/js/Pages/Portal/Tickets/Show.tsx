@@ -161,6 +161,34 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
         });
     };
 
+    const handleConfirmCancel = () => {
+        setCancelProcessing(true);
+        router.post(`${ticketPath}/confirm-cancel`, {}, {
+            onSuccess: () => {
+                setCancelProcessing(false);
+                router.reload({ only: ['ticket'] });
+            },
+            onError: (errors) => {
+                setCancelProcessing(false);
+                alert('Gagal menyetujui pembatalan: ' + Object.values(errors).join(', '));
+            },
+        });
+    };
+
+    const handleRejectCancel = () => {
+        setCancelProcessing(true);
+        router.post(`${ticketPath}/reject-cancel`, {}, {
+            onSuccess: () => {
+                setCancelProcessing(false);
+                router.reload({ only: ['ticket'] });
+            },
+            onError: (errors) => {
+                setCancelProcessing(false);
+                alert('Gagal menolak pembatalan: ' + Object.values(errors).join(', '));
+            },
+        });
+    };
+
     return (
         <PortalLayout>
             <FlashMessage success={flash.success} error={flash.error} />
@@ -169,7 +197,13 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-lg font-semibold text-slate-900">{ticket.title}</h1>
-                        <Badge variant="status" value={ticket.status} />
+                        {ticket.cancel_requested_by_admin ? (
+                            <span className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                                Menunggu Pembatalan
+                            </span>
+                        ) : (
+                            <Badge variant="status" value={ticket.status} />
+                        )}
                         <Badge variant="priority" value={ticket.priority} />
                     </div>
                     <p className="mt-1 text-sm text-slate-500">#{ticket.uuid?.slice(0, 8)}</p>
@@ -220,6 +254,31 @@ export default React.memo(function PortalTicketShow({ ticket: ticketProp, commen
                                     </div>
                                 </form>
                             )}
+                        </div>
+                    )}
+
+                    {ticket.cancel_requested_by_admin && (
+                        <div className="rounded-lg border border-rose-200 bg-rose-50 p-5">
+                            <h2 className="mb-2 text-sm font-semibold text-rose-900">Konfirmasi Pembatalan Tiket</h2>
+                            <p className="mb-4 text-sm text-rose-700">Admin telah mengajukan pembatalan untuk tiket ini. Apakah Anda menyetujui pembatalan ini?</p>
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmCancel}
+                                    className="rounded-md bg-rose-600 px-5 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                                    disabled={cancelProcessing}
+                                >
+                                    Ya, Setujui Pembatalan
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRejectCancel}
+                                    className="rounded-md border border-slate-300 bg-white px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                                    disabled={cancelProcessing}
+                                >
+                                    Tolak Pembatalan
+                                </button>
+                            </div>
                         </div>
                     )}
 

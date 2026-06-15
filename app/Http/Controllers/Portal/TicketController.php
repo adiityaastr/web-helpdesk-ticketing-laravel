@@ -123,6 +123,28 @@ class TicketController extends Controller
         return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Tiket dibuka kembali. Admin akan meninjau ulang.');
     }
 
+    public function confirmCancel(Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+        try {
+            $this->ticketService->confirmCancel($ticket, auth()->user());
+        } catch (TicketException $e) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => $e->getMessage()]);
+        }
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Pembatalan tiket berhasil disetujui.');
+    }
+
+    public function rejectCancel(Ticket $ticket): RedirectResponse
+    {
+        $this->authorize('view', $ticket);
+        try {
+            $this->ticketService->rejectCancel($ticket, auth()->user());
+        } catch (TicketException $e) {
+            return redirect()->route('portal.tickets.show', $ticket)->withErrors(['error' => $e->getMessage()]);
+        }
+        return redirect()->route('portal.tickets.show', $ticket)->with('success', 'Pembatalan tiket berhasil ditolak.');
+    }
+
     public function destroy(Ticket $ticket): RedirectResponse
     {
         $this->authorize('delete', $ticket);
