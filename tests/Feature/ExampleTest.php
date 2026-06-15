@@ -16,4 +16,16 @@ class ExampleTest extends TestCase
 
         $response->assertRedirect(route('login'));
     }
+
+    public function test_auth_user_redirect(): void
+    {
+        $user = \App\Models\User::find(2);
+        if (!$user) {
+            $this->markTestSkipped('User 2 not found');
+        }
+
+        $response = $this->actingAs($user)->get('/');
+        $response->assertRedirect(route('admin.dashboard'));
+    }
 }
+

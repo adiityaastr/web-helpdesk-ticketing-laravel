@@ -1,5 +1,5 @@
 @startuml 02_use_case_diagram
-!define DIRECTION top to bottom
+left to right direction
 skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
